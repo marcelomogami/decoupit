@@ -9,6 +9,8 @@ Python.
 
 ## [Não lançado]
 
+## [0.1.0] - 2026-11-15
+
 ### Adicionado
 
 - Estrutura inicial de empacotamento Python com versão `0.1.0.dev0`.
@@ -28,6 +30,8 @@ Python.
   após interrupção.
 - Worker de execução única com tomada atômica da fila, subprocesso em grupo
   próprio, cancelamento da árvore e registro de sucesso ou falha.
+- API local para criar e listar projetos vazios com persistência entre
+  reinicializações.
 
 ### Alterado
 
@@ -41,5 +45,7 @@ Python.
 
 - Requisições com cabeçalho `Host` fora de `localhost`, `127.0.0.1` e do host
   interno de testes são rejeitadas.
+- Requisições de escrita com `Origin` diferente da origem local são rejeitadas.
 
-[Não lançado]: https://github.com/marcelomogami/decoupit/commits/HEAD
+[Não lançado]: https://github.com/marcelomogami/decoupit/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/marcelomogami/decoupit/releases/tag/v0.1.0

@@ -5,13 +5,13 @@ objetivo é preparar gravações longas antes da edição manual no Kdenlive.
 
 ## Estado
 
-O planejamento inicial está concluído e a fundação técnica começou. Já existem
-o pacote Python, o ambiente reproduzível, uma aplicação web local mínima e as
-verificações básicas. Persistência, processamento de mídia e interface de
-revisão ainda não foram implementados.
+O planejamento inicial e a fundação técnica estão concluídos. Já existem o
+pacote Python, o ambiente reproduzível, a aplicação web local, persistência
+SQLite, projetos vazios e o worker mínimo. Processamento de mídia e interface
+de revisão ainda não foram implementados.
 
-Versão de desenvolvimento atual: `0.1.0.dev0`. As mudanças planejadas e
-entregues são registradas no [CHANGELOG.md](CHANGELOG.md).
+Versão atual: `0.1.0`. As mudanças planejadas e entregues são registradas no
+[CHANGELOG.md](CHANGELOG.md).
 
 ## Objetivo
 
@@ -77,7 +77,8 @@ aceita conexões apenas pela interface local. Outra porta pode ser escolhida com
 Os dados duráveis ficam em `${XDG_DATA_HOME:-~/.local/share}/decoupit` e o
 cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. Na primeira inicialização, o
 DecoupIt cria `decoupit.sqlite3` e aplica as migrações pendentes. O schema atual
-contém apenas a estrutura inicial de projetos; ainda não há interface de CRUD.
+permite criar e listar projetos vazios por `POST /api/projects` e
+`GET /api/projects`. Edição e arquivamento ainda não foram implementados.
 
 A fila persistente possui estados, recuperação e um worker mínimo em processo
 separado. Apenas o job interno `system.noop` está registrado; FFmpeg e modelos
