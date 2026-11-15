@@ -10,8 +10,9 @@ pacote Python, o ambiente reproduzível, a aplicação web local, persistência
 SQLite, projetos vazios e o worker mínimo. Processamento de mídia e interface
 de revisão ainda não foram implementados.
 
-Versão atual: `0.1.0`. As mudanças planejadas e entregues são registradas no
-[CHANGELOG.md](CHANGELOG.md).
+Versão de desenvolvimento atual: `0.2.0.dev0`. A fundação `0.1.0` está
+concluída, e a ingestão de mídia está em desenvolvimento. As mudanças são
+registradas no [CHANGELOG.md](CHANGELOG.md).
 
 ## Objetivo
 
