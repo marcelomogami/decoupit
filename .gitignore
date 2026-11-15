@@ -1,0 +1,46 @@
+# Local agent instructions and internal decision records
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+.gemini/
+.claude/
+docs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+
+# Local configuration
+.env
+.env.*
+!.env.example
+
+# DecoupIt runtime data
+.decoupit/
+*.sqlite3
+
+# Media files
+*.mp4
+*.mkv
+*.mov
+*.webm
+*.avi
+*.wav
+*.flac
+*.m4a
+
+# Editors and operating system
+.idea/
+.vscode/
+*~
+.DS_Store
