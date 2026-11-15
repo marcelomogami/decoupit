@@ -7,8 +7,8 @@ objetivo é preparar gravações longas antes da edição manual no Kdenlive.
 
 O planejamento inicial e a fundação técnica estão concluídos. Já existem o
 pacote Python, o ambiente reproduzível, a aplicação web local, persistência
-SQLite, projetos vazios e o worker mínimo. Processamento de mídia e interface
-de revisão ainda não foram implementados.
+SQLite, projetos vazios, cadastro somente leitura dos brutos e normalização
+CFR 30 pelo worker. A interface de revisão ainda não foi implementada.
 
 Versão de desenvolvimento atual: `0.2.0.dev0`. A fundação `0.1.0` está
 concluída, e a ingestão de mídia está em desenvolvimento. As mudanças são
@@ -17,7 +17,8 @@ registradas no [CHANGELOG.md](CHANGELOG.md).
 Já é possível cadastrar um vídeo bruto por caminho absoluto em um projeto. O
 DecoupIt consulta `ffprobe`, registra a identidade e os metadados do arquivo e
 classifica inicialmente a taxa de quadros sem copiar nem alterar o bruto. A
-normalização CFR 30 ainda não foi conectada ao fluxo.
+normalização CFR 30 já pode ser enfileirada pela API e produz uma mídia de
+edição validada antes da publicação.
 
 ## Objetivo
 
@@ -92,8 +93,18 @@ Vídeos brutos podem ser cadastrados por
 `{"path":"/caminho/absoluto/video.mp4"}`.
 
 A fila persistente possui estados, recuperação e um worker mínimo em processo
-separado. Apenas o job interno `system.noop` está registrado; FFmpeg e modelos
-locais continuam desabilitados até existirem limites explícitos de recursos.
+separado. O job `media.normalize_cfr30` executa FFmpeg com NVENC em um escopo
+do systemd limitado a 2 GiB de memória, 1 GiB de swap e duas horas. Um lock
+local limita a normalização a um vídeo por vez. O worker processa um job com:
+
+```bash
+uv run decoupit-worker --once
+```
+
+A conversão é solicitada por
+`POST /api/projects/{project_id}/sources/{source_id}/normalization`. O estado é
+consultado em `GET /api/jobs/{job_id}` e, após o sucesso, o artefato fica em
+`GET /api/projects/{project_id}/sources/{source_id}/normalization`.
 
 ## Privacidade
 

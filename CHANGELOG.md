@@ -16,6 +16,17 @@ Python.
   codecs e classificação inicial da taxa de quadros.
 - Backup automático do SQLite antes de aplicar migrações pendentes em bancos
   existentes.
+- Job de normalização para H.264 CFR 30 com NVENC, validação por `ffprobe` e
+  publicação por renomeação atômica.
+- Endpoints para enfileirar a normalização, acompanhar o job e consultar a
+  mídia de edição produzida.
+- Limites de 2 GiB de memória, 1 GiB de swap, duas horas e uma normalização
+  ativa por vez.
+
+### Segurança
+
+- A identidade do vídeo bruto é revalidada imediatamente antes da conversão.
+- Um arquivo parcial nunca é publicado como mídia de edição válida.
 
 ## [0.1.0] - 2026-11-15
 
