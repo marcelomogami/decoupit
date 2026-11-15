@@ -11,13 +11,20 @@ requires-python = ">=3.12,<3.13"
 authors = [
   { name = "Marcelo Mogami" },
 ]
-dependencies = []
+dependencies = [
+  "fastapi>=0.163,<0.164",
+  "uvicorn>=0.54,<0.55",
+]
+
+[project.scripts]
+decoupit = "decoupit.cli:main"
 
 [project.urls]
 Repository = "https://github.com/marcelomogami/decoupit"
 
 [dependency-groups]
 dev = [
+  "httpx2>=2.16,<3",
   "pytest>=9,<10",
   "ruff>=0.17,<0.18",
 ]
