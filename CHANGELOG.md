@@ -30,6 +30,8 @@ Python.
   navegação circular entre ocorrências e suporte a frases.
 - Navegação do player ao clicar numa palavra ou selecionar um resultado, sem
   iniciar a reprodução automaticamente.
+- Exportação SRT por download na tela de revisão, usando os segmentos e
+  timestamps persistidos da transcrição.
 
 ### Corrigido
 
