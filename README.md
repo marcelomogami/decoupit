@@ -65,8 +65,8 @@ recriáveis.
 - HTML renderizado pelo servidor com JavaScript mínimo;
 - FFmpeg e ffprobe para normalização e processamento de mídia;
 - NVIDIA NVENC, após validação do perfil;
-- Faster Whisper para transcrição local;
-- WhisperX opcional quando a precisão medida justificar seu custo;
+- WhisperX em ambiente isolado para transcrição local com backend Faster
+  Whisper e refinamento fonético dos timestamps;
 - integração com o Kdenlive por SRT, CSV e marcadores JSON ligados ao clipe.
 
 Processamentos longos serão executados fora do processo web, com limites

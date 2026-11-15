@@ -33,6 +33,14 @@ Python.
 - Exportação SRT por download na tela de revisão, usando os segmentos e
   timestamps persistidos da transcrição.
 
+### Alterado
+
+- O planejamento consolida transcrição e alinhamento num único pipeline
+  WhisperX isolado após as provas encontrarem erros grandes nos timestamps e
+  confirmarem que o perfil com chunks de dez segundos cabe na GPU e recupera
+  falas omitidas sem alterar o conteúdo reconhecido no controle com fala
+  simples; a divisão dos cues continua sendo uma etapa separada.
+
 ### Corrigido
 
 - Resolução do modelo local independente do `XDG_CACHE_HOME` usado pelos dados
