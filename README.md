@@ -11,9 +11,9 @@ SQLite, projetos vazios, cadastro somente leitura dos brutos e normalização
 CFR 30 pelo worker. A página inicial de operação ainda não existe, mas a tela
 de revisão já reproduz o vídeo, mostra o waveform e acompanha tempo e quadros.
 
-Versão de desenvolvimento atual: `0.2.0.dev0`. A fundação `0.1.0` está
-concluída, e a ingestão de mídia está em desenvolvimento. As mudanças são
-registradas no [CHANGELOG.md](CHANGELOG.md).
+Versão atual: `0.2.0`. A fundação `0.1.0` e a fase de ingestão, normalização e
+revisão inicial `0.2.0` estão concluídas. As mudanças são registradas no
+[CHANGELOG.md](CHANGELOG.md).
 
 Já é possível cadastrar um vídeo bruto por caminho absoluto em um projeto. O
 DecoupIt consulta `ffprobe`, registra a identidade e os metadados do arquivo e
