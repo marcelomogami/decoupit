@@ -128,8 +128,8 @@ zero e exibe também o tempo correspondente.
 
 A base da fase de transcrição já executa Faster Whisper `medium` na GPU com
 timestamps por palavra e sem baixar modelos silenciosamente. O worker persiste
-o JSON bruto, segmentos e palavras no SQLite; a tela de revisão ainda não exibe
-o transcript.
+o JSON bruto, segmentos e palavras no SQLite. A tela de revisão mostra o
+transcript ao lado do vídeo e destaca a palavra correspondente ao tempo atual.
 
 ## Privacidade
 

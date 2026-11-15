@@ -23,6 +23,9 @@ Python.
   bruto em arquivo durável.
 - Endpoints para enfileirar e consultar a transcrição atual.
 - Logs locais de jobs com diagnóstico incorporado ao estado de falha.
+- Endpoint de conteúdo da transcrição por identificador interno.
+- Transcript sincronizado ao lado do player, com destaque da palavra ativa e
+  acompanhamento automático do trecho em reprodução.
 
 ### Corrigido
 
