@@ -16,11 +16,22 @@ Python.
 - Configuração de testes com pytest.
 - Configuração de lint e formatação com Ruff.
 - Política de versionamento e changelog desde o início do desenvolvimento.
+- Aplicação FastAPI mínima com página de estado e endpoint de saúde.
+- Comando `decoupit` limitado a `127.0.0.1`, com porta configurável.
+- Resolução e criação dos diretórios de dados e cache conforme o padrão XDG.
+- Testes de integração HTTP, segurança de host, CLI e diretórios locais.
 
 ### Alterado
 
 - Documentação revisada para usar uma mídia de edição CFR 30 como referência
   canônica de quadros.
 - README traduzido para português do Brasil.
+- Dependências reproduzíveis adicionadas para FastAPI, Uvicorn e o cliente de
+  testes HTTPX2.
+
+### Segurança
+
+- Requisições com cabeçalho `Host` fora de `localhost`, `127.0.0.1` e do host
+  interno de testes são rejeitadas.
 
 [Não lançado]: https://github.com/marcelomogami/decoupit/commits/HEAD

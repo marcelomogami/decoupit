@@ -6,8 +6,9 @@ objetivo é preparar gravações longas antes da edição manual no Kdenlive.
 ## Estado
 
 O planejamento inicial está concluído e a fundação técnica começou. Já existem
-o pacote Python, o ambiente reproduzível e as verificações básicas, mas ainda
-não há aplicação executável nem interface web.
+o pacote Python, o ambiente reproduzível, uma aplicação web local mínima e as
+verificações básicas. Persistência, processamento de mídia e interface de
+revisão ainda não foram implementados.
 
 Versão de desenvolvimento atual: `0.1.0.dev0`. As mudanças planejadas e
 entregues são registradas no [CHANGELOG.md](CHANGELOG.md).
@@ -59,6 +60,22 @@ recriáveis.
 
 Processamentos longos serão executados fora do processo web, com limites
 conservadores de memória, swap e concorrência.
+
+## Execução local
+
+Com `uv` instalado:
+
+```bash
+uv sync
+uv run decoupit
+```
+
+A página de estado fica disponível em <http://127.0.0.1:8000>. O servidor
+aceita conexões apenas pela interface local. Outra porta pode ser escolhida com
+`uv run decoupit --port 8123`.
+
+Os dados duráveis ficam em `${XDG_DATA_HOME:-~/.local/share}/decoupit` e o
+cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. O banco ainda não é criado.
 
 ## Privacidade
 
