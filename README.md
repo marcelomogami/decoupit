@@ -79,6 +79,9 @@ cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. Na primeira inicialização, o
 DecoupIt cria `decoupit.sqlite3` e aplica as migrações pendentes. O schema atual
 contém apenas a estrutura inicial de projetos; ainda não há interface de CRUD.
 
+A fila persistente de jobs já possui estados e regras de recuperação, mas o
+worker que executará FFmpeg e modelos locais ainda não existe.
+
 ## Privacidade
 
 O DecoupIt será uma ferramenta pessoal e local. Vídeos, áudios, transcrições e

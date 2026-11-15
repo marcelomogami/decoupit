@@ -24,6 +24,8 @@ Python.
   pacote.
 - Histórico de migrações com versão, nome e checksum para detectar alterações
   incompatíveis em migrações já aplicadas.
+- Contrato persistente de jobs, com estados, regras de transição e recuperação
+  após interrupção.
 
 ### Alterado
 
