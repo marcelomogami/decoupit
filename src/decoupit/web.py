@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
+from starlette.staticfiles import StaticFiles
 
 from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import (
@@ -144,6 +145,11 @@ def create_app(
         redoc_url=None,
     )
     app.state.paths = app_paths
+    app.mount(
+        "/static",
+        StaticFiles(directory=Path(__file__).with_name("static")),
+        name="static",
+    )
     app.add_middleware(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "testserver"],
@@ -364,28 +370,31 @@ def create_app(
                 raise HTTPException(
                     status_code=409, detail="a normalização precisa terminar primeiro"
                 )
+            waveform = get_waveform(connection, normalized.id)
         safe_project_name = escape(project.name)
         safe_source_name = escape(source.path.name)
         media_url = f"/api/normalized-media/{normalized.id}/content"
+        waveform_url = (
+            f"/api/waveforms/{waveform.id}/data"
+            if waveform is not None and waveform.path.is_file()
+            else ""
+        )
         duration = normalized.duration_us / 1_000_000
         size_megabytes = normalized.size_bytes / 1_000_000
+        frame_count = normalized.frame_count or max(
+            1, (normalized.duration_us * 30 + 999_999) // 1_000_000
+        )
         return f"""<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Revisão · {safe_project_name} · DecoupIt</title>
-    <style>
-      :root {{ color-scheme: dark; font-family: system-ui, sans-serif; }}
-      body {{ margin: 0; background: #17191d; color: #f4f4f5; }}
-      main {{ width: min(1100px, calc(100% - 32px)); margin: 24px auto; }}
-      h1 {{ margin-bottom: 4px; }}
-      .meta {{ color: #b4b7bd; margin-top: 0; }}
-      video {{ width: 100%; max-height: 72vh; background: #000; border-radius: 8px; }}
-      #status {{ min-height: 1.5em; color: #b4b7bd; }}
-    </style>
+    <link rel="stylesheet" href="/static/review.css">
+    <script src="/static/review.js" defer></script>
   </head>
-  <body>
+  <body data-fps="30" data-frame-count="{frame_count}"
+        data-waveform-url="{waveform_url}">
     <main>
       <h1>{safe_project_name}</h1>
       <p class="meta">
@@ -393,18 +402,18 @@ def create_app(
       </p>
       <video id="player" controls playsinline preload="metadata"
              src="{media_url}"></video>
+      <div class="position" aria-live="polite">
+        <span id="frame-position">Quadro 0 de {frame_count - 1}</span>
+        <span id="time-position">00:00:00.000</span>
+      </div>
+      <div class="waveform-shell">
+        <canvas id="waveform" hidden tabindex="0" role="slider"
+                aria-label="Posição no áudio" aria-valuemin="0"
+                aria-valuemax="{frame_count - 1}" aria-valuenow="0"></canvas>
+        <p id="waveform-message">Carregando waveform...</p>
+      </div>
       <p id="status">Carregando metadados do vídeo...</p>
     </main>
-    <script>
-      const player = document.querySelector("#player");
-      const status = document.querySelector("#status");
-      player.addEventListener("loadedmetadata", () => {{
-        status.textContent = `Pronto · ${{player.videoWidth}}x${{player.videoHeight}}`;
-      }});
-      player.addEventListener("error", () => {{
-        status.textContent = "O navegador não conseguiu reproduzir esta mídia.";
-      }});
-    </script>
   </body>
 </html>"""
 
