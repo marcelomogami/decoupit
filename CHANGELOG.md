@@ -22,6 +22,16 @@ Python.
   mídia de edição produzida.
 - Limites de 2 GiB de memória, 1 GiB de swap, duas horas e uma normalização
   ativa por vez.
+- Waveform JSON compacto gerado em fluxo diretamente da mídia normalizada, sem
+  persistir um arquivo de áudio intermediário.
+- Endpoints para enfileirar, consultar e obter os dados do waveform por
+  identificador interno.
+
+### Alterado
+
+- O planejamento deixou de prever áudio intermediário obrigatório. Faster
+  Whisper e o waveform usarão inicialmente o áudio contido no MP4 normalizado;
+  um cache separado só será criado se medições futuras justificarem o custo.
 
 ### Segurança
 

@@ -18,7 +18,8 @@ Já é possível cadastrar um vídeo bruto por caminho absoluto em um projeto. O
 DecoupIt consulta `ffprobe`, registra a identidade e os metadados do arquivo e
 classifica inicialmente a taxa de quadros sem copiar nem alterar o bruto. A
 normalização CFR 30 já pode ser enfileirada pela API e produz uma mídia de
-edição validada antes da publicação.
+edição validada antes da publicação. O waveform compacto é gerado diretamente
+desse MP4, sem criar uma cópia de áudio separada.
 
 ## Objetivo
 
@@ -105,6 +106,12 @@ A conversão é solicitada por
 `POST /api/projects/{project_id}/sources/{source_id}/normalization`. O estado é
 consultado em `GET /api/jobs/{job_id}` e, após o sucesso, o artefato fica em
 `GET /api/projects/{project_id}/sources/{source_id}/normalization`.
+
+O waveform é solicitado por
+`POST /api/projects/{project_id}/sources/{source_id}/waveform`. Seus metadados
+ficam no `GET` do mesmo endereço, e os picos são servidos por identificador
+interno em `GET /api/waveforms/{waveform_id}/data`. O artefato fica no cache e
+pode ser recriado; nenhum arquivo de áudio intermediário é persistido.
 
 ## Privacidade
 
