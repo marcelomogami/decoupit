@@ -41,6 +41,30 @@ class TranscriptionRun:
     created_at: str
 
 
+@dataclass(frozen=True, slots=True)
+class TranscriptWordRecord:
+    start_us: int
+    end_us: int
+    text: str
+    probability: float
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptSegmentRecord:
+    segment_index: int
+    start_us: int
+    end_us: int
+    text: str
+    words: tuple[TranscriptWordRecord, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class TranscriptDocument:
+    transcription_run_id: str
+    language: str
+    segments: tuple[TranscriptSegmentRecord, ...]
+
+
 def canonical_profile(profile: dict[str, object]) -> tuple[str, str]:
     profile_json = json.dumps(
         profile, ensure_ascii=False, sort_keys=True, separators=(",", ":")
@@ -92,6 +116,65 @@ def get_transcription_run(
             (normalized_media_id, profile_hash),
         ).fetchone()
     return None if row is None else _run_from_row(row)
+
+
+def get_transcription_run_by_id(
+    connection: sqlite3.Connection, transcription_run_id: str
+) -> TranscriptionRun:
+    row = connection.execute(
+        "SELECT * FROM transcription_runs WHERE id = ?",
+        (transcription_run_id,),
+    ).fetchone()
+    if row is None:
+        raise KeyError(transcription_run_id)
+    return _run_from_row(row)
+
+
+def get_transcript_document(
+    connection: sqlite3.Connection, transcription_run_id: str
+) -> TranscriptDocument:
+    run = get_transcription_run_by_id(connection, transcription_run_id)
+    segment_rows = connection.execute(
+        """
+        SELECT * FROM transcript_segments
+        WHERE transcription_run_id = ?
+        ORDER BY segment_index
+        """,
+        (transcription_run_id,),
+    ).fetchall()
+    word_rows = connection.execute(
+        """
+        SELECT * FROM transcript_words
+        WHERE transcription_run_id = ?
+        ORDER BY segment_index, word_index
+        """,
+        (transcription_run_id,),
+    ).fetchall()
+    words_by_segment: dict[int, list[TranscriptWordRecord]] = {}
+    for row in word_rows:
+        words_by_segment.setdefault(row["segment_index"], []).append(
+            TranscriptWordRecord(
+                start_us=row["start_us"],
+                end_us=row["end_us"],
+                text=row["text"],
+                probability=row["probability"],
+            )
+        )
+    segments = tuple(
+        TranscriptSegmentRecord(
+            segment_index=row["segment_index"],
+            start_us=row["start_us"],
+            end_us=row["end_us"],
+            text=row["text"],
+            words=tuple(words_by_segment.get(row["segment_index"], ())),
+        )
+        for row in segment_rows
+    )
+    return TranscriptDocument(
+        transcription_run_id=run.id,
+        language=run.language,
+        segments=segments,
+    )
 
 
 def _insert_result(

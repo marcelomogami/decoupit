@@ -42,9 +42,12 @@ from decoupit.sources import (
     list_sources,
 )
 from decoupit.transcripts import (
+    TranscriptDocument,
     TranscriptionRun,
     current_profile_hash,
+    get_transcript_document,
     get_transcription_run,
+    get_transcription_run_by_id,
 )
 from decoupit.waveform import (
     Waveform,
@@ -137,6 +140,33 @@ class TranscriptionOutput(BaseModel):
     segment_count: int
     word_count: int
     created_at: str
+
+
+class TranscriptWordOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    start_us: int
+    end_us: int
+    text: str
+    probability: float
+
+
+class TranscriptSegmentOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    segment_index: int
+    start_us: int
+    end_us: int
+    text: str
+    words: tuple[TranscriptWordOutput, ...]
+
+
+class TranscriptDocumentOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    transcription_run_id: str
+    language: str
+    segments: tuple[TranscriptSegmentOutput, ...]
 
 
 def create_app(
@@ -390,12 +420,18 @@ def create_app(
                     status_code=409, detail="a normalização precisa terminar primeiro"
                 )
             waveform = get_waveform(connection, normalized.id)
+            transcription = get_transcription_run(connection, normalized.id)
         safe_project_name = escape(project.name)
         safe_source_name = escape(source.path.name)
         media_url = f"/api/normalized-media/{normalized.id}/content"
         waveform_url = (
             f"/api/waveforms/{waveform.id}/data"
             if waveform is not None and waveform.path.is_file()
+            else ""
+        )
+        transcript_url = (
+            f"/api/transcriptions/{transcription.id}/content"
+            if transcription is not None and transcription.raw_output_path.is_file()
             else ""
         )
         duration = normalized.duration_us / 1_000_000
@@ -413,14 +449,28 @@ def create_app(
     <script src="/static/review.js" defer></script>
   </head>
   <body data-fps="30" data-frame-count="{frame_count}"
-        data-waveform-url="{waveform_url}">
+        data-waveform-url="{waveform_url}"
+        data-transcript-url="{transcript_url}">
     <main>
       <h1>{safe_project_name}</h1>
       <p class="meta">
         {safe_source_name} · {duration:.3f} s · {size_megabytes:.1f} MB
       </p>
-      <video id="player" controls playsinline preload="metadata"
-             src="{media_url}"></video>
+      <div class="review-grid">
+        <div class="media-column">
+          <video id="player" controls playsinline preload="metadata"
+                 src="{media_url}"></video>
+        </div>
+        <aside class="transcript-panel" aria-label="Transcrição">
+          <div class="transcript-heading">
+            <h2>Transcrição</h2>
+            <span id="transcript-language"></span>
+          </div>
+          <div id="transcript" aria-live="off">
+            <p id="transcript-message">Carregando transcrição...</p>
+          </div>
+        </aside>
+      </div>
       <div class="position" aria-live="polite">
         <span id="frame-position">Quadro 0 de {frame_count - 1}</span>
         <span id="time-position">00:00:00.000</span>
@@ -604,5 +654,24 @@ def create_app(
                     status_code=409, detail="o JSON bruto da transcrição está ausente"
                 )
             return transcription
+
+    @app.get(
+        "/api/transcriptions/{transcription_run_id}/content",
+        response_model=TranscriptDocumentOutput,
+    )
+    def transcription_content(transcription_run_id: str) -> TranscriptDocument:
+        with connect_database(app_paths.database) as connection:
+            try:
+                run = get_transcription_run_by_id(connection, transcription_run_id)
+                document = get_transcript_document(connection, transcription_run_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="transcrição não encontrada"
+                ) from error
+        if not run.raw_output_path.is_file():
+            raise HTTPException(
+                status_code=409, detail="o JSON bruto da transcrição está ausente"
+            )
+        return document
 
     return app

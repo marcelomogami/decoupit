@@ -4,12 +4,18 @@ const framePosition = document.querySelector("#frame-position");
 const timePosition = document.querySelector("#time-position");
 const canvas = document.querySelector("#waveform");
 const waveformMessage = document.querySelector("#waveform-message");
+const transcript = document.querySelector("#transcript");
+const transcriptMessage = document.querySelector("#transcript-message");
+const transcriptLanguage = document.querySelector("#transcript-language");
 
 const fps = Number(document.body.dataset.fps);
 const frameCount = Number(document.body.dataset.frameCount);
 const waveformUrl = document.body.dataset.waveformUrl;
+const transcriptUrl = document.body.dataset.transcriptUrl;
 let peaks = null;
 let waveformBase = null;
+let transcriptWords = [];
+let activeWordIndex = -1;
 
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
@@ -33,6 +39,71 @@ function updatePosition(seconds = player.currentTime) {
   timePosition.textContent = formatTime(seconds);
   canvas.setAttribute("aria-valuenow", String(frame));
   drawWaveform();
+  updateTranscript(seconds);
+}
+
+function wordAt(timeUs) {
+  let lower = 0;
+  let upper = transcriptWords.length - 1;
+  let candidate = -1;
+  while (lower <= upper) {
+    const middle = Math.floor((lower + upper) / 2);
+    if (transcriptWords[middle].startUs <= timeUs) {
+      candidate = middle;
+      lower = middle + 1;
+    } else {
+      upper = middle - 1;
+    }
+  }
+  if (candidate >= 0 && timeUs < transcriptWords[candidate].endUs) {
+    return candidate;
+  }
+  return -1;
+}
+
+function updateTranscript(seconds) {
+  const nextWordIndex = wordAt(Math.round(Math.max(0, seconds) * 1000000));
+  if (nextWordIndex === activeWordIndex) {
+    return;
+  }
+  if (activeWordIndex >= 0) {
+    transcriptWords[activeWordIndex].element.classList.remove("active");
+  }
+  activeWordIndex = nextWordIndex;
+  if (activeWordIndex >= 0) {
+    const element = transcriptWords[activeWordIndex].element;
+    element.classList.add("active");
+    element.scrollIntoView({ block: "nearest" });
+  }
+}
+
+function renderTranscript(documentData) {
+  transcript.replaceChildren();
+  transcriptLanguage.textContent = documentData.language;
+  transcriptWords = [];
+  for (const segment of documentData.segments) {
+    const paragraph = document.createElement("p");
+    paragraph.className = "transcript-segment";
+    for (const word of segment.words) {
+      const element = document.createElement("span");
+      element.className = "transcript-word";
+      element.textContent = word.text;
+      paragraph.append(element);
+      transcriptWords.push({
+        startUs: word.start_us,
+        endUs: word.end_us,
+        element,
+      });
+    }
+    transcript.append(paragraph);
+  }
+  if (transcriptWords.length === 0) {
+    const message = document.createElement("p");
+    message.textContent = "Nenhuma fala foi detectada.";
+    transcript.append(message);
+  }
+  activeWordIndex = -1;
+  updateTranscript(player.currentTime);
 }
 
 function renderWaveformBase() {
@@ -167,4 +238,20 @@ if (waveformUrl) {
     });
 } else {
   waveformMessage.textContent = "Waveform ainda não disponível.";
+}
+
+if (transcriptUrl) {
+  fetch(transcriptUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("transcrição indisponível");
+      }
+      return response.json();
+    })
+    .then(renderTranscript)
+    .catch(() => {
+      transcriptMessage.textContent = "Não foi possível carregar a transcrição.";
+    });
+} else {
+  transcriptMessage.textContent = "Transcrição ainda não disponível.";
 }

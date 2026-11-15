@@ -16,7 +16,11 @@ from decoupit.transcription import (
     TranscriptWord,
     runtime_profile,
 )
-from decoupit.transcripts import get_transcription_run, persist_transcription
+from decoupit.transcripts import (
+    get_transcript_document,
+    get_transcription_run,
+    persist_transcription,
+)
 from decoupit.web import create_app
 
 
@@ -101,20 +105,25 @@ def test_transcription_raw_segments_and_words_are_persisted(tmp_path: Path) -> N
     assert list(run.raw_output_path.parent.glob("*.part")) == []
     with connect_database(database_path) as connection:
         assert get_transcription_run(connection, "normalized-1") == run
+        document = get_transcript_document(connection, run.id)
         segments = connection.execute("SELECT * FROM transcript_segments").fetchall()
         words = connection.execute(
             "SELECT * FROM transcript_words ORDER BY word_index"
         ).fetchall()
     assert len(segments) == 1
     assert [word["text"] for word in words] == [" Hello", " world"]
+    assert document.segments[0].words[1].text == " world"
 
     with pytest.raises(TranscriptionError, match="já possui"):
         persist_transcription(database_path, source.id, transcriber=lambda _: result)
 
     with TestClient(create_app(paths=paths)) as client:
         response = client.get(endpoint)
+        content = client.get(f"/api/transcriptions/{run.id}/content")
         rejected = client.post(endpoint, headers={"Origin": "http://testserver"})
     assert response.status_code == 200
     assert response.json()["segment_count"] == 1
     assert response.json()["word_count"] == 2
+    assert content.status_code == 200
+    assert content.json()["segments"][0]["words"][0]["text"] == " Hello"
     assert rejected.status_code == 409
