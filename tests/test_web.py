@@ -17,9 +17,9 @@ def test_status_page_and_health_endpoint(tmp_path: Path) -> None:
 
     assert page.status_code == 200
     assert "DecoupIt" in page.text
-    assert "0.2.0" in page.text
+    assert "0.3.0.dev0" in page.text
     assert health.status_code == 200
-    assert health.json() == {"status": "ready", "version": "0.2.0"}
+    assert health.json() == {"status": "ready", "version": "0.3.0.dev0"}
     assert paths.data.is_dir()
     assert paths.cache.is_dir()
     assert paths.database.is_file()
