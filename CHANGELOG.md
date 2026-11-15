@@ -26,6 +26,8 @@ Python.
   incompatíveis em migrações já aplicadas.
 - Contrato persistente de jobs, com estados, regras de transição e recuperação
   após interrupção.
+- Worker de execução única com tomada atômica da fila, subprocesso em grupo
+  próprio, cancelamento da árvore e registro de sucesso ou falha.
 
 ### Alterado
 
