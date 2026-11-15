@@ -26,12 +26,18 @@ Python.
   persistir um arquivo de áudio intermediário.
 - Endpoints para enfileirar, consultar e obter os dados do waveform por
   identificador interno.
+- Página local de revisão da mídia normalizada com player HTML5.
+- Entrega de vídeo por identificador interno com suporte a requisições HTTP
+  parciais para reprodução e busca.
 
 ### Alterado
 
 - O planejamento deixou de prever áudio intermediário obrigatório. Faster
   Whisper e o waveform usarão inicialmente o áudio contido no MP4 normalizado;
   um cache separado só será criado se medições futuras justificarem o custo.
+- O proxy de revisão permanece desabilitado após a mídia normalizada 1080p
+  reproduzir e buscar corretamente no Chrome. A decisão será reavaliada com
+  vídeos longos.
 
 ### Segurança
 

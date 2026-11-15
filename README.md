@@ -113,6 +113,13 @@ ficam no `GET` do mesmo endereço, e os picos são servidos por identificador
 interno em `GET /api/waveforms/{waveform_id}/data`. O artefato fica no cache e
 pode ser recriado; nenhum arquivo de áudio intermediário é persistido.
 
+A mídia normalizada pode ser revisada em
+`GET /projects/{project_id}/sources/{source_id}/review`. O vídeo é servido por
+identificador interno com suporte a requisições parciais, permitindo reprodução
+e busca sem expor caminhos locais na URL. A amostra 1080p normalizada tocou e
+buscou corretamente no Chrome, então um proxy separado permanece desabilitado
+até que um vídeo longo demonstre necessidade real.
+
 ## Privacidade
 
 O DecoupIt será uma ferramenta pessoal e local. Vídeos, áudios, transcrições e
