@@ -12,7 +12,11 @@ authors = [
   { name = "Marcelo Mogami" },
 ]
 dependencies = [
+  "av>=11,<19",
   "fastapi>=0.163,<0.164",
+  "faster-whisper==1.2.1",
+  "nvidia-cublas-cu12>=12,<13",
+  "nvidia-cudnn-cu12>=9,<10",
   "uvicorn>=0.54,<0.55",
 ]
 
