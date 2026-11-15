@@ -18,6 +18,7 @@ dependencies = [
 
 [project.scripts]
 decoupit = "decoupit.cli:main"
+decoupit-worker = "decoupit.worker:main"
 
 [project.urls]
 Repository = "https://github.com/marcelomogami/decoupit"

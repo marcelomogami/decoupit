@@ -11,7 +11,8 @@ from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 from starlette.middleware.trustedhost import TrustedHostMiddleware
 
-from decoupit.database import initialize_database
+from decoupit.database import connect_database, initialize_database
+from decoupit.job_store import recover_incomplete_jobs
 from decoupit.paths import AppPaths, resolve_app_paths
 
 
@@ -25,6 +26,8 @@ def create_app(paths: AppPaths | None = None) -> FastAPI:
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         app_paths.create_directories()
         initialize_database(app_paths.database)
+        with connect_database(app_paths.database) as connection:
+            recover_incomplete_jobs(connection)
         yield
 
     app = FastAPI(
