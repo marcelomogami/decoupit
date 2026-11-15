@@ -29,6 +29,9 @@ Python.
 - Página local de revisão da mídia normalizada com player HTML5.
 - Entrega de vídeo por identificador interno com suporte a requisições HTTP
   parciais para reprodução e busca.
+- Waveform interativo na tela de revisão, com playhead sincronizado, busca por
+  clique e avanço ou recuo de um quadro pelas setas.
+- Conversões canônicas e testadas entre timestamps inteiros e quadros CFR 30.
 
 ### Alterado
 

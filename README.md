@@ -8,7 +8,8 @@ objetivo é preparar gravações longas antes da edição manual no Kdenlive.
 O planejamento inicial e a fundação técnica estão concluídos. Já existem o
 pacote Python, o ambiente reproduzível, a aplicação web local, persistência
 SQLite, projetos vazios, cadastro somente leitura dos brutos e normalização
-CFR 30 pelo worker. A interface de revisão ainda não foi implementada.
+CFR 30 pelo worker. A página inicial de operação ainda não existe, mas a tela
+de revisão já reproduz o vídeo, mostra o waveform e acompanha tempo e quadros.
 
 Versão de desenvolvimento atual: `0.2.0.dev0`. A fundação `0.1.0` está
 concluída, e a ingestão de mídia está em desenvolvimento. As mudanças são
@@ -119,6 +120,10 @@ identificador interno com suporte a requisições parciais, permitindo reproduç
 e busca sem expor caminhos locais na URL. A amostra 1080p normalizada tocou e
 buscou corretamente no Chrome, então um proxy separado permanece desabilitado
 até que um vídeo longo demonstre necessidade real.
+
+Na revisão, o waveform permite buscar por clique e avançar ou recuar um quadro
+CFR 30 com as setas quando está focado. O contador usa quadros começando em
+zero e exibe também o tempo correspondente.
 
 ## Privacidade
 
