@@ -9,6 +9,14 @@ Python.
 
 ## [Não lançado]
 
+### Adicionado
+
+- Cadastro somente leitura de vídeos brutos por caminho absoluto.
+- Inspeção com `ffprobe`, persistindo identidade, streams, duração, resolução,
+  codecs e classificação inicial da taxa de quadros.
+- Backup automático do SQLite antes de aplicar migrações pendentes em bancos
+  existentes.
+
 ## [0.1.0] - 2026-11-15
 
 ### Adicionado

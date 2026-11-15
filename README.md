@@ -14,6 +14,11 @@ Versão de desenvolvimento atual: `0.2.0.dev0`. A fundação `0.1.0` está
 concluída, e a ingestão de mídia está em desenvolvimento. As mudanças são
 registradas no [CHANGELOG.md](CHANGELOG.md).
 
+Já é possível cadastrar um vídeo bruto por caminho absoluto em um projeto. O
+DecoupIt consulta `ffprobe`, registra a identidade e os metadados do arquivo e
+classifica inicialmente a taxa de quadros sem copiar nem alterar o bruto. A
+normalização CFR 30 ainda não foi conectada ao fluxo.
+
 ## Objetivo
 
 O DecoupIt deve reduzir o trabalho repetitivo anterior à edição criativa:
@@ -80,6 +85,11 @@ cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. Na primeira inicialização, o
 DecoupIt cria `decoupit.sqlite3` e aplica as migrações pendentes. O schema atual
 permite criar e listar projetos vazios por `POST /api/projects` e
 `GET /api/projects`. Edição e arquivamento ainda não foram implementados.
+
+Vídeos brutos podem ser cadastrados por
+`POST /api/projects/{project_id}/sources` e listados por
+`GET /api/projects/{project_id}/sources`. O corpo de cadastro usa
+`{"path":"/caminho/absoluto/video.mp4"}`.
 
 A fila persistente possui estados, recuperação e um worker mínimo em processo
 separado. Apenas o job interno `system.noop` está registrado; FFmpeg e modelos
