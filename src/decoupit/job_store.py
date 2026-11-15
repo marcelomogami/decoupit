@@ -67,6 +67,23 @@ def get_job(connection: sqlite3.Connection, job_id: str) -> Job:
     return _job_from_row(row)
 
 
+def find_active_normalization_job(
+    connection: sqlite3.Connection, source_id: str
+) -> Job | None:
+    row = connection.execute(
+        """
+        SELECT * FROM jobs
+        WHERE kind = 'media.normalize_cfr30'
+          AND json_extract(payload_json, '$.source_id') = ?
+          AND state IN ('queued', 'running', 'cancel_requested')
+        ORDER BY created_at, id
+        LIMIT 1
+        """,
+        (source_id,),
+    ).fetchone()
+    return None if row is None else _job_from_row(row)
+
+
 def claim_next_job(connection: sqlite3.Connection) -> Job | None:
     """Atomically claim the oldest queued job."""
 

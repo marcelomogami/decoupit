@@ -9,7 +9,23 @@ import pytest
 from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import enqueue_job, get_job, request_cancellation
 from decoupit.jobs import JobState
-from decoupit.worker import run_next_job
+from decoupit.worker import _normalization_command, run_next_job
+
+
+def test_normalization_command_has_explicit_resource_limits(tmp_path: Path) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    command = tuple(_normalization_command(database_path)({"source_id": "source-1"}))
+
+    assert command[:4] == ("systemd-run", "--user", "--scope", "--quiet")
+    assert "MemoryMax=2G" in command
+    assert "MemorySwapMax=1G" in command
+    assert "RuntimeMaxSec=2h" in command
+    assert command[-4:] == (
+        "--database",
+        str(database_path),
+        "--source-id",
+        "source-1",
+    )
 
 
 def test_worker_completes_registered_job_in_subprocess(tmp_path: Path) -> None:

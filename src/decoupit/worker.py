@@ -32,7 +32,41 @@ def _noop_command(_: Mapping[str, Any]) -> Sequence[str]:
     return (sys.executable, "-c", "raise SystemExit(0)")
 
 
-DEFAULT_HANDLERS: dict[str, JobHandler] = {"system.noop": _noop_command}
+def _normalization_command(
+    database_path: Path,
+) -> JobHandler:
+    def command(payload: Mapping[str, Any]) -> Sequence[str]:
+        source_id = payload.get("source_id")
+        if not isinstance(source_id, str) or not source_id:
+            raise ValueError("source_id ausente ou inválido")
+        return (
+            "systemd-run",
+            "--user",
+            "--scope",
+            "--quiet",
+            "-p",
+            "MemoryMax=2G",
+            "-p",
+            "MemorySwapMax=1G",
+            "-p",
+            "RuntimeMaxSec=2h",
+            sys.executable,
+            "-m",
+            "decoupit.normalization",
+            "--database",
+            str(database_path),
+            "--source-id",
+            source_id,
+        )
+
+    return command
+
+
+def _default_handlers(database_path: Path) -> dict[str, JobHandler]:
+    return {
+        "system.noop": _noop_command,
+        "media.normalize_cfr30": _normalization_command(database_path),
+    }
 
 
 class WorkerInterrupted(Exception):
@@ -69,7 +103,9 @@ def run_next_job(
 ) -> bool:
     """Claim and execute at most one job, returning whether one was claimed."""
 
-    available_handlers = DEFAULT_HANDLERS if handlers is None else handlers
+    available_handlers = (
+        _default_handlers(database_path) if handlers is None else handlers
+    )
     with connect_database(database_path) as connection:
         job = claim_next_job(connection)
     if job is None:

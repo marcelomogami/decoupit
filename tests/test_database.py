@@ -26,13 +26,19 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
         schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
         foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
 
-    assert {"jobs", "projects", "schema_migrations", "source_media"} <= tables
+    assert {
+        "jobs",
+        "normalized_media",
+        "projects",
+        "schema_migrations",
+        "source_media",
+    } <= tables
     assert dict(migration) == {
         "version": 1,
         "name": "create_projects",
         "checksum_length": 64,
     }
-    assert schema_version == 3
+    assert schema_version == 4
     assert foreign_keys == 1
 
 
@@ -47,7 +53,7 @@ def test_initialize_database_is_idempotent(tmp_path: Path) -> None:
             0
         ]
 
-    assert count == 3
+    assert count == 4
 
 
 def test_project_constraints_reject_invalid_state(tmp_path: Path) -> None:
@@ -96,7 +102,7 @@ def test_existing_database_is_backed_up_before_pending_migration(
 ) -> None:
     database_path = tmp_path / "decoupit.sqlite3"
     migrations = database_module._load_migrations()
-    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations[:2])
+    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations[:3])
     initialize_database(database_path)
     with connect_database(database_path) as connection:
         connection.execute(
@@ -107,7 +113,7 @@ def test_existing_database_is_backed_up_before_pending_migration(
     monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations)
     initialize_database(database_path)
 
-    backups = list((tmp_path / "backups").glob("*-before-v0003.sqlite3"))
+    backups = list((tmp_path / "backups").glob("*-before-v0004.sqlite3"))
     assert len(backups) == 1
     with connect_database(backups[0]) as connection:
         project = connection.execute(
@@ -115,4 +121,4 @@ def test_existing_database_is_backed_up_before_pending_migration(
         ).fetchone()
         version = connection.execute("PRAGMA user_version").fetchone()[0]
     assert project["name"] == "Preservado"
-    assert version == 2
+    assert version == 3

@@ -37,6 +37,7 @@ class SourceInspection:
     sample_rate: int | None
     channels: int | None
     probe_json: str
+    frame_count: int | None = None
 
 
 def _rate(value: Any) -> tuple[int, int] | None:
@@ -173,4 +174,5 @@ def probe_source(
         probe_json=json.dumps(
             probe_data, ensure_ascii=False, sort_keys=True, separators=(",", ":")
         ),
+        frame_count=_optional_int(video.get("nb_frames")),
     )

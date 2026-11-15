@@ -15,7 +15,11 @@ class SourceMedia:
     id: str
     project_id: str
     path: Path
+    device: int
+    inode: int
     size_bytes: int
+    modified_at_ns: int
+    format_name: str
     duration_us: int | None
     video_codec: str
     width: int
@@ -32,7 +36,11 @@ def _source_from_row(row: sqlite3.Row) -> SourceMedia:
         id=row["id"],
         project_id=row["project_id"],
         path=Path(row["absolute_path"]),
+        device=row["device"],
+        inode=row["inode"],
         size_bytes=row["size_bytes"],
+        modified_at_ns=row["modified_at_ns"],
+        format_name=row["format_name"],
         duration_us=row["duration_us"],
         video_codec=row["video_codec"],
         width=row["width"],
@@ -102,3 +110,12 @@ def list_sources(connection: sqlite3.Connection, project_id: str) -> list[Source
         (project_id,),
     ).fetchall()
     return [_source_from_row(row) for row in rows]
+
+
+def get_source(connection: sqlite3.Connection, source_id: str) -> SourceMedia:
+    row = connection.execute(
+        "SELECT * FROM source_media WHERE id = ?", (source_id,)
+    ).fetchone()
+    if row is None:
+        raise KeyError(source_id)
+    return _source_from_row(row)

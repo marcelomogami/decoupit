@@ -18,11 +18,24 @@ from starlette.middleware.trustedhost import TrustedHostMiddleware
 from starlette.responses import Response
 
 from decoupit.database import connect_database, initialize_database
-from decoupit.job_store import recover_incomplete_jobs
+from decoupit.job_store import (
+    Job,
+    enqueue_job,
+    find_active_normalization_job,
+    get_job,
+    recover_incomplete_jobs,
+)
+from decoupit.jobs import JobState
 from decoupit.media import MediaProbeError, SourceInspection, probe_source
+from decoupit.normalization import NormalizedMedia, get_normalized_media
 from decoupit.paths import AppPaths, resolve_app_paths
 from decoupit.projects import Project, create_project, get_project, list_projects
-from decoupit.sources import SourceMedia, create_source, list_sources
+from decoupit.sources import (
+    SourceMedia,
+    create_source,
+    get_source,
+    list_sources,
+)
 
 
 class ProjectInput(BaseModel):
@@ -58,6 +71,29 @@ class SourceOutput(BaseModel):
     audio_codec: str | None
     sample_rate: int | None
     channels: int | None
+    created_at: str
+
+
+class JobOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    kind: str
+    state: JobState
+    attempt: int
+    error_message: str | None
+
+
+class NormalizedMediaOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    source_id: str
+    path: Path
+    size_bytes: int
+    duration_us: int
+    frame_count: int | None
+    video_codec: str
     created_at: str
 
 
@@ -181,5 +217,76 @@ def create_app(
                 status_code=409,
                 detail="a mídia já está cadastrada neste projeto",
             ) from error
+
+    @app.post(
+        "/api/projects/{project_id}/sources/{source_id}/normalization",
+        response_model=JobOutput,
+        status_code=202,
+    )
+    def normalization_create(project_id: str, source_id: str) -> Job:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            if get_normalized_media(connection, source_id) is not None:
+                raise HTTPException(
+                    status_code=409, detail="a mídia já possui versão normalizada"
+                )
+            active_job = find_active_normalization_job(connection, source_id)
+            if active_job is not None:
+                return active_job
+            try:
+                job_id = enqueue_job(
+                    connection,
+                    kind="media.normalize_cfr30",
+                    payload={"source_id": source_id},
+                    project_id=project_id,
+                )
+            except sqlite3.IntegrityError:
+                active_job = find_active_normalization_job(connection, source_id)
+                if active_job is None:
+                    raise
+                return active_job
+            return get_job(connection, job_id)
+
+    @app.get("/api/jobs/{job_id}", response_model=JobOutput)
+    def jobs_show(job_id: str) -> Job:
+        with connect_database(app_paths.database) as connection:
+            try:
+                return get_job(connection, job_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="job não encontrado"
+                ) from error
+
+    @app.get(
+        "/api/projects/{project_id}/sources/{source_id}/normalization",
+        response_model=NormalizedMediaOutput,
+    )
+    def normalization_show(project_id: str, source_id: str) -> NormalizedMedia:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            if normalized is None:
+                raise HTTPException(
+                    status_code=404, detail="mídia normalizada ainda não disponível"
+                )
+            return normalized
 
     return app
