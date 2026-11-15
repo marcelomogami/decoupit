@@ -20,6 +20,7 @@ def test_status_page_and_health_endpoint(tmp_path: Path) -> None:
     assert health.json() == {"status": "ready", "version": "0.1.0.dev0"}
     assert paths.data.is_dir()
     assert paths.cache.is_dir()
+    assert paths.database.is_file()
 
 
 def test_unknown_host_is_rejected(tmp_path: Path) -> None:
