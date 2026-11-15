@@ -191,6 +191,9 @@ function renderTranscript(documentData) {
   transcriptWords = [];
   searchableTranscript = "";
   for (const segment of documentData.segments) {
+    if (searchableTranscript) {
+      searchableTranscript += " ";
+    }
     const paragraph = document.createElement("p");
     paragraph.className = "transcript-segment";
     for (const word of segment.words) {

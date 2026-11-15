@@ -12,6 +12,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+runtime/whisperx/models/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

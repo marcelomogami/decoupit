@@ -1,0 +1,15 @@
+[project]
+name = "decoupit-whisperx-runtime"
+version = "0.1.0"
+requires-python = "==3.12.*"
+dependencies = [
+  "av==19.0.2",
+  "faster-whisper==1.2.1",
+  "pyannote.audio==4.0.7",
+  "torch==2.8.0",
+  "torchaudio==2.8.0",
+  "whisperx==3.8.6",
+]
+
+[tool.uv]
+package = false

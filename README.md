@@ -78,12 +78,18 @@ Com `uv` instalado:
 
 ```bash
 uv sync
+uv sync --project runtime/whisperx --frozen
 uv run decoupit
 ```
 
 A página de estado fica disponível em <http://127.0.0.1:8000>. O servidor
 aceita conexões apenas pela interface local. Outra porta pode ser escolhida com
 `uv run decoupit --port 8123`.
+
+O modelo fonético do alinhador é instalado separadamente e verificado por
+SHA-256. As opções de localização estão em
+[`runtime/whisperx/README.md`](runtime/whisperx/README.md). Nenhum modelo é
+baixado durante um job.
 
 Os dados duráveis ficam em `${XDG_DATA_HOME:-~/.local/share}/decoupit` e o
 cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. Na primeira inicialização, o
@@ -127,9 +133,10 @@ Na revisão, o waveform permite buscar por clique e avançar ou recuar um quadro
 CFR 30 com as setas quando está focado. O contador usa quadros começando em
 zero e exibe também o tempo correspondente.
 
-A base da fase de transcrição já executa Faster Whisper `medium` na GPU com
-timestamps por palavra e sem baixar modelos silenciosamente. O worker persiste
-o JSON bruto, segmentos e palavras no SQLite. A tela de revisão mostra o
+A transcrição executa um pipeline WhisperX isolado com Faster Whisper
+`medium`, VAD e alinhamento fonético na GPU. O worker preserva no JSON a saída
+anterior e posterior ao alinhamento e persiste os timestamps refinados no
+SQLite, sem baixar modelos silenciosamente. A tela de revisão mostra o
 transcript ao lado do vídeo e destaca a palavra correspondente ao tempo atual.
 Cada palavra pode ser clicada para levar o player ao seu início sem começar a
 reprodução. A busca ignora maiúsculas, minúsculas e acentos, aceita frases e

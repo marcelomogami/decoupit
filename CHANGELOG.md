@@ -11,16 +11,18 @@ Python.
 
 ### Adicionado
 
-- Integração inicial com Faster Whisper `medium` em GPU e timestamps por
-  palavra convertidos para microssegundos inteiros.
-- Runtime CUDA 12 próprio do ambiente Python, com cuBLAS e cuDNN declarados,
-  sem depender das bibliotecas internas do Kdenlive.
+- Pipeline WhisperX com Faster Whisper `medium`, VAD do pyannote e alinhamento
+  fonético, usando chunks de dez segundos e timestamps em microssegundos.
+- Runtime de IA separado e reproduzível, com PyTorch, CUDA, WhisperX e suas
+  dependências fixados sem contaminar o ambiente principal.
 - Perfil reproduzível com revisão exata do modelo e versões das bibliotecas
   registradas junto ao JSON bruto.
 - Job persistente de transcrição com limites de 8 GiB de memória, 2 GiB de swap
-  e duas horas.
+  quatro CPUs e duas horas.
 - Tabelas separadas para runs, segmentos e palavras, preservando também o JSON
   bruto em arquivo durável.
+- Saídas anterior e posterior ao alinhamento preservadas no mesmo JSON, com os
+  timestamps refinados usados pela interface e pelo SQLite.
 - Endpoints para enfileirar e consultar a transcrição atual.
 - Logs locais de jobs com diagnóstico incorporado ao estado de falha.
 - Endpoint de conteúdo da transcrição por identificador interno.
@@ -40,16 +42,22 @@ Python.
   confirmarem que o perfil com chunks de dez segundos cabe na GPU e recupera
   falas omitidas sem alterar o conteúdo reconhecido no controle com fala
   simples; a divisão dos cues continua sendo uma etapa separada.
+- A integração direta com Faster Whisper foi substituída pelo pipeline
+  WhisperX, mantendo a API, a persistência e a tela de revisão existentes.
+- As dependências pesadas de IA saíram do ambiente principal e passaram para
+  um projeto `uv` próprio.
 
 ### Corrigido
 
 - Resolução do modelo local independente do `XDG_CACHE_HOME` usado pelos dados
   descartáveis do DecoupIt.
+- Resolução do executável do ambiente virtual sem seguir o link simbólico até
+  o Python base.
 
 ### Segurança
 
-- A integração usa somente o modelo presente no cache local e não inicia
-  download durante uma transcrição.
+- A integração usa somente os modelos presentes no cache local, verifica o
+  SHA-256 do alinhador e não inicia download durante uma transcrição.
 
 ## [0.2.0] - 2026-11-15
 

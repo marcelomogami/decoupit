@@ -99,7 +99,7 @@ def test_transcription_raw_segments_and_words_are_persisted(tmp_path: Path) -> N
 
     assert run.segment_count == 1
     assert run.word_count == 2
-    assert json.loads(run.raw_output_path.read_text())["language"] == "en"
+    assert json.loads(run.raw_output_path.read_text())["result"]["language"] == "en"
     assert source_path.read_bytes() == b"source"
     assert normalized_path.read_bytes() == b"normalized"
     assert list(run.raw_output_path.parent.glob("*.part")) == []

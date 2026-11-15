@@ -24,7 +24,6 @@ from decoupit.job_store import (
 )
 from decoupit.jobs import JobState
 from decoupit.paths import resolve_app_paths
-from decoupit.transcription import cuda_library_path
 
 JobHandler = Callable[[Mapping[str, Any]], Sequence[str]]
 
@@ -108,9 +107,9 @@ def _transcription_command(database_path: Path) -> JobHandler:
             "-p",
             "MemorySwapMax=2G",
             "-p",
+            "CPUQuota=400%",
+            "-p",
             "RuntimeMaxSec=2h",
-            "/usr/bin/env",
-            f"LD_LIBRARY_PATH={cuda_library_path()}",
             sys.executable,
             "-m",
             "decoupit.transcripts",

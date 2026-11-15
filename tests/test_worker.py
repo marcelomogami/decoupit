@@ -61,8 +61,9 @@ def test_transcription_command_has_explicit_resource_limits(tmp_path: Path) -> N
     assert command[:4] == ("systemd-run", "--user", "--scope", "--quiet")
     assert "MemoryMax=8G" in command
     assert "MemorySwapMax=2G" in command
+    assert "CPUQuota=400%" in command
     assert "RuntimeMaxSec=2h" in command
-    assert any(part.startswith("LD_LIBRARY_PATH=") for part in command)
+    assert not any(part.startswith("LD_LIBRARY_PATH=") for part in command)
     assert command[-4:] == (
         "--database",
         str(database_path),
