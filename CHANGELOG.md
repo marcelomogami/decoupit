@@ -17,6 +17,17 @@ Python.
   sem depender das bibliotecas internas do Kdenlive.
 - Perfil reproduzível com revisão exata do modelo e versões das bibliotecas
   registradas junto ao JSON bruto.
+- Job persistente de transcrição com limites de 8 GiB de memória, 2 GiB de swap
+  e duas horas.
+- Tabelas separadas para runs, segmentos e palavras, preservando também o JSON
+  bruto em arquivo durável.
+- Endpoints para enfileirar e consultar a transcrição atual.
+- Logs locais de jobs com diagnóstico incorporado ao estado de falha.
+
+### Corrigido
+
+- Resolução do modelo local independente do `XDG_CACHE_HOME` usado pelos dados
+  descartáveis do DecoupIt.
 
 ### Segurança
 
