@@ -22,14 +22,16 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
             "SELECT version, name, length(checksum) AS checksum_length "
             "FROM schema_migrations"
         ).fetchone()
+        schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
         foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
 
-    assert {"projects", "schema_migrations"} <= tables
+    assert {"jobs", "projects", "schema_migrations"} <= tables
     assert dict(migration) == {
         "version": 1,
         "name": "create_projects",
         "checksum_length": 64,
     }
+    assert schema_version == 2
     assert foreign_keys == 1
 
 
@@ -44,7 +46,7 @@ def test_initialize_database_is_idempotent(tmp_path: Path) -> None:
             0
         ]
 
-    assert count == 1
+    assert count == 2
 
 
 def test_project_constraints_reject_invalid_state(tmp_path: Path) -> None:
@@ -72,3 +74,17 @@ def test_changed_applied_migration_is_rejected(tmp_path: Path) -> None:
 
     with pytest.raises(MigrationError, match="migração aplicada foi alterada: 1"):
         initialize_database(database_path)
+
+
+def test_job_constraints_reject_invalid_state(tmp_path: Path) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    initialize_database(database_path)
+
+    with (
+        connect_database(database_path) as connection,
+        pytest.raises(sqlite3.IntegrityError),
+    ):
+        connection.execute(
+            "INSERT INTO jobs (id, kind, state) VALUES (?, ?, ?)",
+            ("job-id", "normalize_media", "invalid"),
+        )
