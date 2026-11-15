@@ -466,6 +466,18 @@ def create_app(
             <h2>Transcrição</h2>
             <span id="transcript-language"></span>
           </div>
+          <form id="transcript-search" role="search">
+            <label class="visually-hidden" for="transcript-query">
+              Buscar na transcrição
+            </label>
+            <input id="transcript-query" type="search"
+                   placeholder="Buscar na transcrição" autocomplete="off">
+            <button id="previous-match" type="button" disabled
+                    aria-label="Resultado anterior">↑</button>
+            <button id="next-match" type="submit" disabled
+                    aria-label="Próximo resultado">↓</button>
+            <output id="match-count" for="transcript-query"></output>
+          </form>
           <div id="transcript" aria-live="off">
             <p id="transcript-message">Carregando transcrição...</p>
           </div>

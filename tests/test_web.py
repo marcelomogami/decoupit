@@ -266,6 +266,9 @@ def test_enqueue_waveform_only_after_normalization(tmp_path: Path) -> None:
     assert 'data-fps="30"' in review.text
     assert 'data-frame-count="30"' in review.text
     assert 'data-transcript-url=""' in review.text
+    assert 'id="transcript-query"' in review.text
+    assert 'id="previous-match"' in review.text
+    assert 'id="next-match"' in review.text
     assert media.status_code == 206
     assert media.content == b"rmal"
     assert media.headers["content-range"] == "bytes 2-5/10"
@@ -274,6 +277,8 @@ def test_enqueue_waveform_only_after_normalization(tmp_path: Path) -> None:
     assert review_script.status_code == 200
     assert "requestVideoFrameCallback" in review_script.text
     assert "updateTranscript" in review_script.text
+    assert "findSearchMatches" in review_script.text
+    assert "selectSearchMatch" in review_script.text
     assert created.status_code == 202
     assert created.json()["kind"] == "media.generate_waveform"
     assert duplicate.json()["id"] == created.json()["id"]

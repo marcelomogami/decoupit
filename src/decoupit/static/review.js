@@ -7,6 +7,11 @@ const waveformMessage = document.querySelector("#waveform-message");
 const transcript = document.querySelector("#transcript");
 const transcriptMessage = document.querySelector("#transcript-message");
 const transcriptLanguage = document.querySelector("#transcript-language");
+const transcriptSearch = document.querySelector("#transcript-search");
+const transcriptQuery = document.querySelector("#transcript-query");
+const previousMatch = document.querySelector("#previous-match");
+const nextMatch = document.querySelector("#next-match");
+const matchCount = document.querySelector("#match-count");
 
 const fps = Number(document.body.dataset.fps);
 const frameCount = Number(document.body.dataset.frameCount);
@@ -16,6 +21,9 @@ let peaks = null;
 let waveformBase = null;
 let transcriptWords = [];
 let activeWordIndex = -1;
+let searchableTranscript = "";
+let searchMatches = [];
+let currentMatchIndex = -1;
 
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
@@ -77,22 +85,134 @@ function updateTranscript(seconds) {
   }
 }
 
+function normalizeSearchText(text) {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase();
+}
+
+function updateMatchCount() {
+  if (searchMatches.length === 0) {
+    matchCount.textContent = transcriptQuery.value.trim() ? "Nenhum resultado" : "";
+  } else if (currentMatchIndex < 0) {
+    matchCount.textContent = `${searchMatches.length} resultado${searchMatches.length === 1 ? "" : "s"}`;
+  } else {
+    matchCount.textContent = `${currentMatchIndex + 1} de ${searchMatches.length}`;
+  }
+  previousMatch.disabled = searchMatches.length === 0;
+  nextMatch.disabled = searchMatches.length === 0;
+}
+
+function clearSearchClasses() {
+  for (const word of transcriptWords) {
+    word.element.classList.remove("search-match", "search-current");
+  }
+}
+
+function wordIndexesForSearchRange(start, end) {
+  let lower = 0;
+  let upper = transcriptWords.length - 1;
+  let first = transcriptWords.length;
+  while (lower <= upper) {
+    const middle = Math.floor((lower + upper) / 2);
+    if (transcriptWords[middle].searchEnd > start) {
+      first = middle;
+      upper = middle - 1;
+    } else {
+      lower = middle + 1;
+    }
+  }
+  const indexes = [];
+  for (
+    let index = first;
+    index < transcriptWords.length && transcriptWords[index].searchStart < end;
+    index += 1
+  ) {
+    indexes.push(index);
+  }
+  return indexes;
+}
+
+function findSearchMatches() {
+  clearSearchClasses();
+  searchMatches = [];
+  currentMatchIndex = -1;
+  const query = normalizeSearchText(transcriptQuery.value.trim());
+  if (!query) {
+    updateMatchCount();
+    return;
+  }
+  let position = 0;
+  while ((position = searchableTranscript.indexOf(query, position)) >= 0) {
+    const end = position + query.length;
+    const wordIndexes = wordIndexesForSearchRange(position, end);
+    if (wordIndexes.length > 0) {
+      searchMatches.push({
+        firstWordIndex: wordIndexes[0],
+        lastWordIndex: wordIndexes[wordIndexes.length - 1],
+      });
+      for (const index of wordIndexes) {
+        transcriptWords[index].element.classList.add("search-match");
+      }
+    }
+    position = end;
+  }
+  updateMatchCount();
+}
+
+function selectSearchMatch(direction) {
+  if (searchMatches.length === 0) {
+    return;
+  }
+  if (currentMatchIndex >= 0) {
+    const previous = searchMatches[currentMatchIndex];
+    for (let index = previous.firstWordIndex; index <= previous.lastWordIndex; index += 1) {
+      transcriptWords[index].element.classList.remove("search-current");
+    }
+  }
+  currentMatchIndex =
+    (currentMatchIndex + direction + searchMatches.length) % searchMatches.length;
+  const match = searchMatches[currentMatchIndex];
+  for (let index = match.firstWordIndex; index <= match.lastWordIndex; index += 1) {
+    transcriptWords[index].element.classList.add("search-current");
+  }
+  const firstWord = transcriptWords[match.firstWordIndex];
+  player.currentTime = firstWord.startUs / 1000000;
+  firstWord.element.focus({ preventScroll: true });
+  firstWord.element.scrollIntoView({ block: "nearest" });
+  updatePosition(player.currentTime);
+  updateMatchCount();
+}
+
 function renderTranscript(documentData) {
   transcript.replaceChildren();
   transcriptLanguage.textContent = documentData.language;
   transcriptWords = [];
+  searchableTranscript = "";
   for (const segment of documentData.segments) {
     const paragraph = document.createElement("p");
     paragraph.className = "transcript-segment";
     for (const word of segment.words) {
-      const element = document.createElement("span");
+      const element = document.createElement("button");
+      element.type = "button";
       element.className = "transcript-word";
       element.textContent = word.text;
+      element.title = `Ir para ${formatTime(word.start_us / 1000000)}`;
+      element.addEventListener("click", () => {
+        player.currentTime = word.start_us / 1000000;
+        updatePosition(player.currentTime);
+      });
       paragraph.append(element);
+      const normalizedText = normalizeSearchText(word.text);
+      const searchStart = searchableTranscript.length;
+      searchableTranscript += normalizedText;
       transcriptWords.push({
         startUs: word.start_us,
         endUs: word.end_us,
         element,
+        searchStart,
+        searchEnd: searchableTranscript.length,
       });
     }
     transcript.append(paragraph);
@@ -104,7 +224,15 @@ function renderTranscript(documentData) {
   }
   activeWordIndex = -1;
   updateTranscript(player.currentTime);
+  findSearchMatches();
 }
+
+transcriptQuery.addEventListener("input", findSearchMatches);
+transcriptSearch.addEventListener("submit", (event) => {
+  event.preventDefault();
+  selectSearchMatch(1);
+});
+previousMatch.addEventListener("click", () => selectSearchMatch(-1));
 
 function renderWaveformBase() {
   if (!peaks || !player.duration) {
