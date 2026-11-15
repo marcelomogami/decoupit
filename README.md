@@ -1,62 +1,67 @@
 # DecoupIt
 
-DecoupIt is a local pre-editing and video review tool designed to prepare long
-raw recordings before manual editing in Kdenlive.
+O DecoupIt é uma ferramenta local de pré-edição e revisão de vídeos. Seu
+objetivo é preparar gravações longas antes da edição manual no Kdenlive.
 
-## Status
+## Estado
 
-The project is currently in the planning stage. There is no implementation or
-installable application yet.
+O planejamento inicial está concluído e a fundação técnica começou. Já existem
+o pacote Python, o ambiente reproduzível e as verificações básicas, mas ainda
+não há aplicação executável nem interface web.
 
-## Goal
+Versão de desenvolvimento atual: `0.1.0.dev0`. As mudanças planejadas e
+entregues são registradas no [CHANGELOG.md](CHANGELOG.md).
 
-DecoupIt aims to reduce the repetitive work that happens before creative video
-editing:
+## Objetivo
 
-- generating a lightweight review proxy;
-- producing a searchable, time-aligned transcript;
-- identifying topics and repeated takes;
-- suggesting primary and alternative takes;
-- flagging long pauses, interrupted speech, coughs, and other events for
-  review;
-- classifying segments as primary, alternative, blooper, or discarded;
-- exporting subtitles, review reports, and markers for Kdenlive.
+O DecoupIt deve reduzir o trabalho repetitivo anterior à edição criativa:
 
-The expected workflow is:
+- normalizar vídeos VFR do celular para uma mídia de edição CFR 30;
+- gerar um proxy leve para revisão quando ele for necessário;
+- produzir uma transcrição pesquisável e sincronizada;
+- identificar assuntos e tentativas repetidas;
+- sugerir takes principais e alternativas;
+- sinalizar pausas longas, frases interrompidas, tosses e outros eventos;
+- classificar intervalos como principal, alternativa, blooper ou descarte;
+- exportar legendas, relatórios e marcadores para o Kdenlive.
+
+O fluxo esperado é:
 
 ```text
-raw video
-  -> local analysis and review in DecoupIt
-  -> SRT, CSV, and Kdenlive markers
-  -> precise editing and final rendering in Kdenlive
+vídeo bruto VFR
+  -> mídia de edição CFR 30
+  -> análise e revisão local no DecoupIt
+  -> SRT, CSV e marcadores de clipe
+  -> edição precisa e renderização final no Kdenlive
 ```
 
-## Product boundaries
+## Limites do produto
 
-DecoupIt is not intended to replace a nonlinear video editor. It will not
-provide advanced timeline editing, effects, color grading, music arrangement,
-titles, transitions, or final rendering.
+O DecoupIt não pretende substituir um editor não linear. Ele não oferecerá
+timeline avançada, efeitos, correção de cor, música, títulos, transições ou
+renderização final.
 
-Every automated decision must remain reviewable. The original media is treated
-as read-only, and all derived artifacts must be reproducible.
+Toda decisão automática permanecerá revisável. O vídeo bruto será tratado como
+somente leitura. A mídia normalizada e os demais artefatos derivados serão
+recriáveis.
 
-## Planned architecture
+## Arquitetura planejada
 
-- Python 3.12 in an isolated environment
-- FastAPI backend bound to localhost
-- SQLite for project state and review decisions
-- Server-rendered HTML with minimal JavaScript
-- FFmpeg and ffprobe for media processing
-- NVIDIA NVENC for compatible review proxies
-- Faster Whisper for local transcription
-- Optional WhisperX alignment when additional timestamp precision is needed
-- Kdenlive integration through SRT, CSV, and marker JSON exports
+- Python 3.12 em ambiente isolado;
+- FastAPI vinculado apenas ao computador local;
+- SQLite para estado dos projetos e decisões de revisão;
+- HTML renderizado pelo servidor com JavaScript mínimo;
+- FFmpeg e ffprobe para normalização e processamento de mídia;
+- NVIDIA NVENC, após validação do perfil;
+- Faster Whisper para transcrição local;
+- WhisperX opcional quando a precisão medida justificar seu custo;
+- integração com o Kdenlive por SRT, CSV e marcadores JSON ligados ao clipe.
 
-Long-running analysis will execute outside the web process with conservative
-memory and concurrency limits.
+Processamentos longos serão executados fora do processo web, com limites
+conservadores de memória, swap e concorrência.
 
-## Privacy
+## Privacidade
 
-DecoupIt is planned as a local-only personal tool. Video, audio, transcripts,
-and review decisions remain on the user's computer. No cloud service or
-telemetry is required by the initial design.
+O DecoupIt será uma ferramenta pessoal e local. Vídeos, áudios, transcrições e
+decisões permanecerão no computador. A primeira versão não dependerá de serviço
+em nuvem nem terá telemetria.

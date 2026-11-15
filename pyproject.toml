@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "decoupit"
+version = "0.1.0.dev0"
+description = "Ferramenta local de pré-edição e revisão de vídeos para o Kdenlive"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [
+  { name = "Marcelo Mogami" },
+]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/marcelomogami/decoupit"
+
+[dependency-groups]
+dev = [
+  "pytest>=9,<10",
+  "ruff>=0.17,<0.18",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/decoupit"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.format]
+quote-style = "double"
