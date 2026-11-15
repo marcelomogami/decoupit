@@ -9,6 +9,20 @@ Python.
 
 ## [Não lançado]
 
+### Adicionado
+
+- Integração inicial com Faster Whisper `medium` em GPU e timestamps por
+  palavra convertidos para microssegundos inteiros.
+- Runtime CUDA 12 próprio do ambiente Python, com cuBLAS e cuDNN declarados,
+  sem depender das bibliotecas internas do Kdenlive.
+- Perfil reproduzível com revisão exata do modelo e versões das bibliotecas
+  registradas junto ao JSON bruto.
+
+### Segurança
+
+- A integração usa somente o modelo presente no cache local e não inicia
+  download durante uma transcrição.
+
 ## [0.2.0] - 2026-11-15
 
 ### Adicionado

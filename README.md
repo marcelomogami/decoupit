@@ -126,6 +126,10 @@ Na revisão, o waveform permite buscar por clique e avançar ou recuar um quadro
 CFR 30 com as setas quando está focado. O contador usa quadros começando em
 zero e exibe também o tempo correspondente.
 
+A base da fase de transcrição já executa Faster Whisper `medium` na GPU com
+timestamps por palavra e sem baixar modelos silenciosamente. Essa integração
+ainda não está ligada à fila, ao SQLite ou à tela de revisão.
+
 ## Privacidade
 
 O DecoupIt será uma ferramenta pessoal e local. Vídeos, áudios, transcrições e
