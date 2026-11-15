@@ -9,7 +9,8 @@ O planejamento inicial e a fundação técnica estão concluídos. Já existem o
 pacote Python, o ambiente reproduzível, a aplicação web local, persistência
 SQLite, projetos vazios, cadastro somente leitura dos brutos e normalização
 CFR 30 pelo worker. A página inicial de operação ainda não existe, mas a tela
-de revisão já reproduz o vídeo, mostra o waveform e acompanha tempo e quadros.
+de revisão já reproduz o vídeo, mostra o waveform, acompanha tempo e quadros e
+oferece uma transcrição pesquisável.
 
 Versão de desenvolvimento atual: `0.3.0.dev0`. A fundação `0.1.0` e a fase de
 ingestão, normalização e revisão inicial `0.2.0` estão concluídas; a transcrição
@@ -130,6 +131,9 @@ A base da fase de transcrição já executa Faster Whisper `medium` na GPU com
 timestamps por palavra e sem baixar modelos silenciosamente. O worker persiste
 o JSON bruto, segmentos e palavras no SQLite. A tela de revisão mostra o
 transcript ao lado do vídeo e destaca a palavra correspondente ao tempo atual.
+Cada palavra pode ser clicada para levar o player ao seu início sem começar a
+reprodução. A busca ignora maiúsculas, minúsculas e acentos, aceita frases e
+permite navegar pelas ocorrências anteriores e seguintes.
 
 ## Privacidade
 

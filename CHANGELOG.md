@@ -26,6 +26,10 @@ Python.
 - Endpoint de conteúdo da transcrição por identificador interno.
 - Transcript sincronizado ao lado do player, com destaque da palavra ativa e
   acompanhamento automático do trecho em reprodução.
+- Busca local na transcrição, sem distinção de maiúsculas ou acentos, com
+  navegação circular entre ocorrências e suporte a frases.
+- Navegação do player ao clicar numa palavra ou selecionar um resultado, sem
+  iniciar a reprodução automaticamente.
 
 ### Corrigido
 
