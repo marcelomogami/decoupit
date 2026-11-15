@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+import decoupit.database as database_module
 from decoupit.database import MigrationError, connect_database, initialize_database
 
 
@@ -25,13 +26,13 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
         schema_version = connection.execute("PRAGMA user_version").fetchone()[0]
         foreign_keys = connection.execute("PRAGMA foreign_keys").fetchone()[0]
 
-    assert {"jobs", "projects", "schema_migrations"} <= tables
+    assert {"jobs", "projects", "schema_migrations", "source_media"} <= tables
     assert dict(migration) == {
         "version": 1,
         "name": "create_projects",
         "checksum_length": 64,
     }
-    assert schema_version == 2
+    assert schema_version == 3
     assert foreign_keys == 1
 
 
@@ -46,7 +47,7 @@ def test_initialize_database_is_idempotent(tmp_path: Path) -> None:
             0
         ]
 
-    assert count == 2
+    assert count == 3
 
 
 def test_project_constraints_reject_invalid_state(tmp_path: Path) -> None:
@@ -88,3 +89,30 @@ def test_job_constraints_reject_invalid_state(tmp_path: Path) -> None:
             "INSERT INTO jobs (id, kind, state) VALUES (?, ?, ?)",
             ("job-id", "normalize_media", "invalid"),
         )
+
+
+def test_existing_database_is_backed_up_before_pending_migration(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    migrations = database_module._load_migrations()
+    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations[:2])
+    initialize_database(database_path)
+    with connect_database(database_path) as connection:
+        connection.execute(
+            "INSERT INTO projects (id, name) VALUES ('kept', 'Preservado')"
+        )
+        connection.commit()
+
+    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations)
+    initialize_database(database_path)
+
+    backups = list((tmp_path / "backups").glob("*-before-v0003.sqlite3"))
+    assert len(backups) == 1
+    with connect_database(backups[0]) as connection:
+        project = connection.execute(
+            "SELECT name FROM projects WHERE id = 'kept'"
+        ).fetchone()
+        version = connection.execute("PRAGMA user_version").fetchone()[0]
+    assert project["name"] == "Preservado"
+    assert version == 2

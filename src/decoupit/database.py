@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 import sqlite3
+import uuid
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from importlib import resources
 from pathlib import Path
 
@@ -105,14 +108,38 @@ def _apply_migration(connection: sqlite3.Connection, migration: Migration) -> No
         raise
 
 
+def _backup_database(
+    connection: sqlite3.Connection, path: Path, target_version: int
+) -> Path:
+    backup_directory = path.parent / "backups"
+    backup_directory.mkdir(parents=True, exist_ok=True)
+    timestamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
+    backup_path = backup_directory / (
+        f"{timestamp}-{uuid.uuid4().hex}-before-v{target_version:04d}.sqlite3"
+    )
+    temporary_path = backup_path.with_suffix(".tmp")
+    try:
+        with sqlite3.connect(temporary_path) as backup_connection:
+            connection.backup(backup_connection)
+        os.replace(temporary_path, backup_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+    return backup_path
+
+
 def initialize_database(path: Path) -> None:
     """Create the database and apply every pending migration."""
 
+    database_existed = path.exists()
     path.parent.mkdir(parents=True, exist_ok=True)
     migrations = _load_migrations()
     with connect_database(path) as connection:
         _ensure_migration_table(connection)
         applied = _validate_history(connection, migrations)
-        for migration in migrations:
-            if migration.version not in applied:
-                _apply_migration(connection, migration)
+        pending = tuple(
+            migration for migration in migrations if migration.version not in applied
+        )
+        if database_existed and pending:
+            _backup_database(connection, path, pending[-1].version)
+        for migration in pending:
+            _apply_migration(connection, migration)

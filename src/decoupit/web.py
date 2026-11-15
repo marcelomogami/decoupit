@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import sqlite3
+from collections.abc import AsyncIterator, Callable
 from contextlib import asynccontextmanager
 from html import escape
 from importlib.metadata import version
+from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Request
@@ -17,8 +19,10 @@ from starlette.responses import Response
 
 from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import recover_incomplete_jobs
+from decoupit.media import MediaProbeError, SourceInspection, probe_source
 from decoupit.paths import AppPaths, resolve_app_paths
-from decoupit.projects import Project, create_project, list_projects
+from decoupit.projects import Project, create_project, get_project, list_projects
+from decoupit.sources import SourceMedia, create_source, list_sources
 
 
 class ProjectInput(BaseModel):
@@ -35,7 +39,32 @@ class ProjectOutput(BaseModel):
     updated_at: str
 
 
-def create_app(paths: AppPaths | None = None) -> FastAPI:
+class SourceInput(BaseModel):
+    path: Path
+
+
+class SourceOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    project_id: str
+    path: Path
+    size_bytes: int
+    duration_us: int | None
+    video_codec: str
+    width: int
+    height: int
+    frame_rate_mode: str
+    audio_codec: str | None
+    sample_rate: int | None
+    channels: int | None
+    created_at: str
+
+
+def create_app(
+    paths: AppPaths | None = None,
+    media_probe: Callable[[Path], SourceInspection] = probe_source,
+) -> FastAPI:
     """Build the application without starting a server."""
 
     app_paths = resolve_app_paths() if paths is None else paths
@@ -113,5 +142,44 @@ def create_app(paths: AppPaths | None = None) -> FastAPI:
                 return create_project(connection, name=project_input.name)
         except ValueError as error:
             raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.get("/api/projects/{project_id}/sources", response_model=list[SourceOutput])
+    def sources_index(project_id: str) -> list[SourceMedia]:
+        with connect_database(app_paths.database) as connection:
+            try:
+                get_project(connection, project_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="projeto não encontrado"
+                ) from error
+            return list_sources(connection, project_id)
+
+    @app.post(
+        "/api/projects/{project_id}/sources",
+        response_model=SourceOutput,
+        status_code=201,
+    )
+    def sources_create(project_id: str, source_input: SourceInput) -> SourceMedia:
+        if not source_input.path.is_absolute():
+            raise HTTPException(status_code=422, detail="o caminho deve ser absoluto")
+        with connect_database(app_paths.database) as connection:
+            try:
+                get_project(connection, project_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="projeto não encontrado"
+                ) from error
+        try:
+            inspection = media_probe(source_input.path)
+        except MediaProbeError as error:
+            raise HTTPException(status_code=422, detail=str(error)) from error
+        try:
+            with connect_database(app_paths.database) as connection:
+                return create_source(connection, project_id, inspection)
+        except sqlite3.IntegrityError as error:
+            raise HTTPException(
+                status_code=409,
+                detail="a mídia já está cadastrada neste projeto",
+            ) from error
 
     return app

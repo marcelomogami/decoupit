@@ -56,3 +56,12 @@ def list_projects(connection: sqlite3.Connection) -> list[Project]:
         "SELECT * FROM projects ORDER BY created_at, id"
     ).fetchall()
     return [_project_from_row(row) for row in rows]
+
+
+def get_project(connection: sqlite3.Connection, project_id: str) -> Project:
+    row = connection.execute(
+        "SELECT * FROM projects WHERE id = ?", (project_id,)
+    ).fetchone()
+    if row is None:
+        raise KeyError(project_id)
+    return _project_from_row(row)
