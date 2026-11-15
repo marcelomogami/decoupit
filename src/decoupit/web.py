@@ -27,7 +27,11 @@ from decoupit.job_store import (
 )
 from decoupit.jobs import JobState
 from decoupit.media import MediaProbeError, SourceInspection, probe_source
-from decoupit.normalization import NormalizedMedia, get_normalized_media
+from decoupit.normalization import (
+    NormalizedMedia,
+    get_normalized_media,
+    get_normalized_media_by_id,
+)
 from decoupit.paths import AppPaths, resolve_app_paths
 from decoupit.projects import Project, create_project, get_project, list_projects
 from decoupit.sources import (
@@ -310,6 +314,99 @@ def create_app(
                     status_code=404, detail="mídia normalizada ainda não disponível"
                 )
             return normalized
+
+    @app.get(
+        "/api/normalized-media/{normalized_media_id}/content",
+        response_class=FileResponse,
+    )
+    def normalized_media_content(normalized_media_id: str) -> FileResponse:
+        with connect_database(app_paths.database) as connection:
+            try:
+                normalized = get_normalized_media_by_id(connection, normalized_media_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia normalizada não encontrada"
+                ) from error
+        if not normalized.path.is_file():
+            raise HTTPException(
+                status_code=404, detail="mídia normalizada não encontrada"
+            )
+        if normalized.path.stat().st_size != normalized.size_bytes:
+            raise HTTPException(
+                status_code=409, detail="a mídia normalizada mudou no disco"
+            )
+        return FileResponse(
+            normalized.path,
+            media_type="video/mp4",
+            headers={"Cache-Control": "no-store"},
+        )
+
+    @app.get(
+        "/projects/{project_id}/sources/{source_id}/review",
+        response_class=HTMLResponse,
+        include_in_schema=False,
+    )
+    def source_review(project_id: str, source_id: str) -> str:
+        with connect_database(app_paths.database) as connection:
+            try:
+                project = get_project(connection, project_id)
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="projeto ou mídia não encontrado"
+                ) from error
+            if source.project_id != project.id:
+                raise HTTPException(
+                    status_code=404, detail="projeto ou mídia não encontrado"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            if normalized is None:
+                raise HTTPException(
+                    status_code=409, detail="a normalização precisa terminar primeiro"
+                )
+        safe_project_name = escape(project.name)
+        safe_source_name = escape(source.path.name)
+        media_url = f"/api/normalized-media/{normalized.id}/content"
+        duration = normalized.duration_us / 1_000_000
+        size_megabytes = normalized.size_bytes / 1_000_000
+        return f"""<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Revisão · {safe_project_name} · DecoupIt</title>
+    <style>
+      :root {{ color-scheme: dark; font-family: system-ui, sans-serif; }}
+      body {{ margin: 0; background: #17191d; color: #f4f4f5; }}
+      main {{ width: min(1100px, calc(100% - 32px)); margin: 24px auto; }}
+      h1 {{ margin-bottom: 4px; }}
+      .meta {{ color: #b4b7bd; margin-top: 0; }}
+      video {{ width: 100%; max-height: 72vh; background: #000; border-radius: 8px; }}
+      #status {{ min-height: 1.5em; color: #b4b7bd; }}
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>{safe_project_name}</h1>
+      <p class="meta">
+        {safe_source_name} · {duration:.3f} s · {size_megabytes:.1f} MB
+      </p>
+      <video id="player" controls playsinline preload="metadata"
+             src="{media_url}"></video>
+      <p id="status">Carregando metadados do vídeo...</p>
+    </main>
+    <script>
+      const player = document.querySelector("#player");
+      const status = document.querySelector("#status");
+      player.addEventListener("loadedmetadata", () => {{
+        status.textContent = `Pronto · ${{player.videoWidth}}x${{player.videoHeight}}`;
+      }});
+      player.addEventListener("error", () => {{
+        status.textContent = "O navegador não conseguiu reproduzir esta mídia.";
+      }});
+    </script>
+  </body>
+</html>"""
 
     @app.post(
         "/api/projects/{project_id}/sources/{source_id}/waveform",

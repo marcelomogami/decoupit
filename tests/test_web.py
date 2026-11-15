@@ -251,10 +251,22 @@ def test_enqueue_waveform_only_after_normalization(tmp_path: Path) -> None:
                 ),
             )
             connection.commit()
+        review = client.get(f"/projects/{project['id']}/sources/{source['id']}/review")
+        media = client.get(
+            "/api/normalized-media/normalized-1/content",
+            headers={"Range": "bytes=2-5"},
+        )
         created = client.post(endpoint, headers={"Origin": "http://testserver"})
         duplicate = client.post(endpoint, headers={"Origin": "http://testserver"})
 
     assert too_early.status_code == 409
+    assert review.status_code == 200
+    assert 'src="/api/normalized-media/normalized-1/content"' in review.text
+    assert media.status_code == 206
+    assert media.content == b"rmal"
+    assert media.headers["content-range"] == "bytes 2-5/10"
+    assert media.headers["accept-ranges"] == "bytes"
+    assert media.headers["content-type"] == "video/mp4"
     assert created.status_code == 202
     assert created.json()["kind"] == "media.generate_waveform"
     assert duplicate.json()["id"] == created.json()["id"]

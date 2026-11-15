@@ -114,6 +114,17 @@ def get_normalized_media(
     return None if row is None else _normalized_from_row(row)
 
 
+def get_normalized_media_by_id(
+    connection: sqlite3.Connection, normalized_media_id: str
+) -> NormalizedMedia:
+    row = connection.execute(
+        "SELECT * FROM normalized_media WHERE id = ?", (normalized_media_id,)
+    ).fetchone()
+    if row is None:
+        raise KeyError(normalized_media_id)
+    return _normalized_from_row(row)
+
+
 def _verify_source_identity(source: SourceMedia) -> None:
     try:
         stat = source.path.stat()
