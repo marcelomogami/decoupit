@@ -62,10 +62,41 @@ def _normalization_command(
     return command
 
 
-def _default_handlers(database_path: Path) -> dict[str, JobHandler]:
+def _waveform_command(database_path: Path, cache_root: Path) -> JobHandler:
+    def command(payload: Mapping[str, Any]) -> Sequence[str]:
+        source_id = payload.get("source_id")
+        if not isinstance(source_id, str) or not source_id:
+            raise ValueError("source_id ausente ou inválido")
+        return (
+            "systemd-run",
+            "--user",
+            "--scope",
+            "--quiet",
+            "-p",
+            "MemoryMax=512M",
+            "-p",
+            "MemorySwapMax=256M",
+            "-p",
+            "RuntimeMaxSec=30m",
+            sys.executable,
+            "-m",
+            "decoupit.waveform",
+            "--database",
+            str(database_path),
+            "--cache-root",
+            str(cache_root),
+            "--source-id",
+            source_id,
+        )
+
+    return command
+
+
+def _default_handlers(database_path: Path, cache_root: Path) -> dict[str, JobHandler]:
     return {
         "system.noop": _noop_command,
         "media.normalize_cfr30": _normalization_command(database_path),
+        "media.generate_waveform": _waveform_command(database_path, cache_root),
     }
 
 
@@ -97,14 +128,20 @@ def run_next_job(
     database_path: Path,
     *,
     handlers: Mapping[str, JobHandler] | None = None,
+    cache_root: Path | None = None,
     poll_interval: float = 0.05,
     terminate_timeout: float = 2.0,
     sleep: Callable[[float], None] = time.sleep,
 ) -> bool:
     """Claim and execute at most one job, returning whether one was claimed."""
 
+    resolved_cache_root = (
+        database_path.parent / "cache" if cache_root is None else cache_root
+    )
     available_handlers = (
-        _default_handlers(database_path) if handlers is None else handlers
+        _default_handlers(database_path, resolved_cache_root)
+        if handlers is None
+        else handlers
     )
     with connect_database(database_path) as connection:
         job = claim_next_job(connection)
@@ -185,7 +222,7 @@ def main(argv: Sequence[str] | None = None) -> None:
     previous_sigterm = signal.signal(signal.SIGTERM, interrupt_worker)
     previous_sigint = signal.signal(signal.SIGINT, interrupt_worker)
     try:
-        run_next_job(paths.database)
+        run_next_job(paths.database, cache_root=paths.cache)
     except WorkerInterrupted as error:
         raise SystemExit(128 + error.signal_number) from error
     finally:

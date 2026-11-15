@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.base import RequestResponseEndpoint
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -21,7 +21,7 @@ from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import (
     Job,
     enqueue_job,
-    find_active_normalization_job,
+    find_active_source_job,
     get_job,
     recover_incomplete_jobs,
 )
@@ -35,6 +35,11 @@ from decoupit.sources import (
     create_source,
     get_source,
     list_sources,
+)
+from decoupit.waveform import (
+    Waveform,
+    get_waveform,
+    get_waveform_by_id,
 )
 
 
@@ -94,6 +99,19 @@ class NormalizedMediaOutput(BaseModel):
     duration_us: int
     frame_count: int | None
     video_codec: str
+    created_at: str
+
+
+class WaveformOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    normalized_media_id: str
+    size_bytes: int
+    point_count: int
+    sample_rate: int
+    samples_per_point: int
+    format_version: int
     created_at: str
 
 
@@ -239,7 +257,9 @@ def create_app(
                 raise HTTPException(
                     status_code=409, detail="a mídia já possui versão normalizada"
                 )
-            active_job = find_active_normalization_job(connection, source_id)
+            active_job = find_active_source_job(
+                connection, "media.normalize_cfr30", source_id
+            )
             if active_job is not None:
                 return active_job
             try:
@@ -250,7 +270,9 @@ def create_app(
                     project_id=project_id,
                 )
             except sqlite3.IntegrityError:
-                active_job = find_active_normalization_job(connection, source_id)
+                active_job = find_active_source_job(
+                    connection, "media.normalize_cfr30", source_id
+                )
                 if active_job is None:
                     raise
                 return active_job
@@ -288,5 +310,92 @@ def create_app(
                     status_code=404, detail="mídia normalizada ainda não disponível"
                 )
             return normalized
+
+    @app.post(
+        "/api/projects/{project_id}/sources/{source_id}/waveform",
+        response_model=JobOutput,
+        status_code=202,
+    )
+    def waveform_create(project_id: str, source_id: str) -> Job:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            if normalized is None:
+                raise HTTPException(
+                    status_code=409, detail="a normalização precisa terminar primeiro"
+                )
+            existing = get_waveform(connection, normalized.id)
+            if existing is not None and existing.path.is_file():
+                raise HTTPException(
+                    status_code=409, detail="a mídia já possui waveform"
+                )
+            active_job = find_active_source_job(
+                connection, "media.generate_waveform", source_id
+            )
+            if active_job is not None:
+                return active_job
+            try:
+                job_id = enqueue_job(
+                    connection,
+                    kind="media.generate_waveform",
+                    payload={"source_id": source_id},
+                    project_id=project_id,
+                )
+            except sqlite3.IntegrityError:
+                active_job = find_active_source_job(
+                    connection, "media.generate_waveform", source_id
+                )
+                if active_job is None:
+                    raise
+                return active_job
+            return get_job(connection, job_id)
+
+    @app.get(
+        "/api/projects/{project_id}/sources/{source_id}/waveform",
+        response_model=WaveformOutput,
+    )
+    def waveform_show(project_id: str, source_id: str) -> Waveform:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            waveform = (
+                None if normalized is None else get_waveform(connection, normalized.id)
+            )
+            if waveform is None or not waveform.path.is_file():
+                raise HTTPException(
+                    status_code=404, detail="waveform ainda não disponível"
+                )
+            return waveform
+
+    @app.get("/api/waveforms/{waveform_id}/data", response_class=FileResponse)
+    def waveform_data(waveform_id: str) -> FileResponse:
+        with connect_database(app_paths.database) as connection:
+            try:
+                waveform = get_waveform_by_id(connection, waveform_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="waveform não encontrado"
+                ) from error
+        if not waveform.path.is_file():
+            raise HTTPException(status_code=404, detail="waveform não encontrado")
+        return FileResponse(waveform.path, media_type="application/json")
 
     return app

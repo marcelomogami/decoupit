@@ -9,7 +9,7 @@ import pytest
 from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import enqueue_job, get_job, request_cancellation
 from decoupit.jobs import JobState
-from decoupit.worker import _normalization_command, run_next_job
+from decoupit.worker import _normalization_command, _waveform_command, run_next_job
 
 
 def test_normalization_command_has_explicit_resource_limits(tmp_path: Path) -> None:
@@ -23,6 +23,27 @@ def test_normalization_command_has_explicit_resource_limits(tmp_path: Path) -> N
     assert command[-4:] == (
         "--database",
         str(database_path),
+        "--source-id",
+        "source-1",
+    )
+
+
+def test_waveform_command_has_explicit_resource_limits(tmp_path: Path) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    cache_root = tmp_path / "cache"
+    command = tuple(
+        _waveform_command(database_path, cache_root)({"source_id": "source-1"})
+    )
+
+    assert command[:4] == ("systemd-run", "--user", "--scope", "--quiet")
+    assert "MemoryMax=512M" in command
+    assert "MemorySwapMax=256M" in command
+    assert "RuntimeMaxSec=30m" in command
+    assert command[-6:] == (
+        "--database",
+        str(database_path),
+        "--cache-root",
+        str(cache_root),
         "--source-id",
         "source-1",
     )

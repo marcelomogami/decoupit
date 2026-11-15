@@ -3,20 +3,18 @@
 from __future__ import annotations
 
 import argparse
-import fcntl
 import json
 import os
 import sqlite3
 import subprocess
 import uuid
-from collections.abc import Callable, Iterator, Sequence
-from contextlib import contextmanager
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO
 
 from decoupit.database import connect_database
 from decoupit.media import SourceInspection, probe_source
+from decoupit.resource_lock import exclusive_heavy_job
 from decoupit.sources import SourceMedia, get_source
 
 CommandRunner = Callable[..., subprocess.CompletedProcess[str]]
@@ -132,15 +130,6 @@ def _verify_source_identity(source: SourceMedia) -> None:
         raise NormalizationError("o vídeo bruto mudou desde o cadastro")
 
 
-@contextmanager
-def _exclusive_normalization(database_path: Path) -> Iterator[IO[bytes]]:
-    lock_path = database_path.parent / "normalization.lock"
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
-    with lock_path.open("a+b") as lock_file:
-        fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
-        yield lock_file
-
-
 def _validate_output(source: SourceMedia, output: SourceInspection) -> None:
     if output.frame_rate_mode != "constant":
         raise NormalizationError("a saída não possui taxa de quadros constante")
@@ -203,7 +192,7 @@ def normalize_source(
     runner: CommandRunner = subprocess.run,
     probe: MediaProbe = probe_source,
 ) -> NormalizedMedia:
-    with _exclusive_normalization(database_path):
+    with exclusive_heavy_job(database_path):
         return _normalize_source_locked(
             database_path, source_id, runner=runner, probe=probe
         )
