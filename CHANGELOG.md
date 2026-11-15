@@ -20,6 +20,10 @@ Python.
 - Comando `decoupit` limitado a `127.0.0.1`, com porta configurável.
 - Resolução e criação dos diretórios de dados e cache conforme o padrão XDG.
 - Testes de integração HTTP, segurança de host, CLI e diretórios locais.
+- Banco SQLite inicial com tabela de projetos e migrações incorporadas ao
+  pacote.
+- Histórico de migrações com versão, nome e checksum para detectar alterações
+  incompatíveis em migrações já aplicadas.
 
 ### Alterado
 

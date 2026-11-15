@@ -75,7 +75,9 @@ aceita conexões apenas pela interface local. Outra porta pode ser escolhida com
 `uv run decoupit --port 8123`.
 
 Os dados duráveis ficam em `${XDG_DATA_HOME:-~/.local/share}/decoupit` e o
-cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. O banco ainda não é criado.
+cache em `${XDG_CACHE_HOME:-~/.cache}/decoupit`. Na primeira inicialização, o
+DecoupIt cria `decoupit.sqlite3` e aplica as migrações pendentes. O schema atual
+contém apenas a estrutura inicial de projetos; ainda não há interface de CRUD.
 
 ## Privacidade
 
