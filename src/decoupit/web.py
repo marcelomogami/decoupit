@@ -41,6 +41,7 @@ from decoupit.sources import (
     get_source,
     list_sources,
 )
+from decoupit.subtitles import render_srt
 from decoupit.transcripts import (
     TranscriptDocument,
     TranscriptionRun,
@@ -434,6 +435,13 @@ def create_app(
             if transcription is not None and transcription.raw_output_path.is_file()
             else ""
         )
+        subtitle_link = (
+            f'<a class="transcript-download" '
+            f'href="/api/transcriptions/{transcription.id}/subtitles.srt" '
+            f'download="transcript.srt">Baixar SRT</a>'
+            if transcript_url
+            else ""
+        )
         duration = normalized.duration_us / 1_000_000
         size_megabytes = normalized.size_bytes / 1_000_000
         frame_count = normalized.frame_count or max(
@@ -464,7 +472,10 @@ def create_app(
         <aside class="transcript-panel" aria-label="Transcrição">
           <div class="transcript-heading">
             <h2>Transcrição</h2>
-            <span id="transcript-language"></span>
+            <div class="transcript-actions">
+              <span id="transcript-language"></span>
+              {subtitle_link}
+            </div>
           </div>
           <form id="transcript-search" role="search">
             <label class="visually-hidden" for="transcript-query">
@@ -685,5 +696,28 @@ def create_app(
                 status_code=409, detail="o JSON bruto da transcrição está ausente"
             )
         return document
+
+    @app.get("/api/transcriptions/{transcription_run_id}/subtitles.srt")
+    def transcription_subtitles(transcription_run_id: str) -> Response:
+        with connect_database(app_paths.database) as connection:
+            try:
+                run = get_transcription_run_by_id(connection, transcription_run_id)
+                document = get_transcript_document(connection, transcription_run_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="transcrição não encontrada"
+                ) from error
+        if not run.raw_output_path.is_file():
+            raise HTTPException(
+                status_code=409, detail="o JSON bruto da transcrição está ausente"
+            )
+        return Response(
+            render_srt(document),
+            media_type="application/x-subrip; charset=utf-8",
+            headers={
+                "Cache-Control": "no-store",
+                "Content-Disposition": 'attachment; filename="transcript.srt"',
+            },
+        )
 
     return app

@@ -69,6 +69,23 @@ video {
   font-size: 1rem;
 }
 
+.transcript-actions {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.transcript-download {
+  color: #8bc4ff;
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.transcript-download:hover,
+.transcript-download:focus-visible {
+  text-decoration: underline;
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;

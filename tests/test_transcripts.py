@@ -120,10 +120,20 @@ def test_transcription_raw_segments_and_words_are_persisted(tmp_path: Path) -> N
     with TestClient(create_app(paths=paths)) as client:
         response = client.get(endpoint)
         content = client.get(f"/api/transcriptions/{run.id}/content")
+        subtitles = client.get(f"/api/transcriptions/{run.id}/subtitles.srt")
+        review = client.get(f"/projects/{project.id}/sources/{source.id}/review")
         rejected = client.post(endpoint, headers={"Origin": "http://testserver"})
     assert response.status_code == 200
     assert response.json()["segment_count"] == 1
     assert response.json()["word_count"] == 2
     assert content.status_code == 200
     assert content.json()["segments"][0]["words"][0]["text"] == " Hello"
+    assert subtitles.status_code == 200
+    assert subtitles.headers["content-type"] == "application/x-subrip; charset=utf-8"
+    assert subtitles.headers["content-disposition"] == (
+        'attachment; filename="transcript.srt"'
+    )
+    assert subtitles.text == ("1\n00:00:00,100 --> 00:00:00,800\nHello world\n")
+    assert f"/api/transcriptions/{run.id}/subtitles.srt" in review.text
+    assert "Baixar SRT" in review.text
     assert rejected.status_code == 409
