@@ -6,9 +6,9 @@ from typing import Any
 import pytest
 
 from decoupit.transcription import (
-    MODEL_ID,
     MODEL_REVISION,
     TranscriptionError,
+    resolve_model_path,
     transcribe_media,
     write_result,
 )
@@ -40,7 +40,9 @@ def test_transcription_uses_validated_profile_and_integer_timestamps(
     tmp_path: Path,
 ) -> None:
     media_path = tmp_path / "normalized.mp4"
+    model_path = tmp_path / "model"
     media_path.write_bytes(b"media")
+    model_path.mkdir()
     model = FakeModel()
     factory_arguments: dict[str, Any] = {}
 
@@ -48,10 +50,10 @@ def test_transcription_uses_validated_profile_and_integer_timestamps(
         factory_arguments.update(model_name=model_name, **kwargs)
         return model
 
-    result = transcribe_media(media_path, model_factory=factory)
+    result = transcribe_media(media_path, model_factory=factory, model_path=model_path)
 
     assert factory_arguments == {
-        "model_name": MODEL_ID,
+        "model_name": str(model_path),
         "device": "cuda",
         "compute_type": "float16",
         "cpu_threads": 4,
@@ -79,7 +81,9 @@ def test_transcription_uses_validated_profile_and_integer_timestamps(
 
 def test_transcription_rejects_result_without_word_timestamps(tmp_path: Path) -> None:
     media_path = tmp_path / "normalized.mp4"
+    model_path = tmp_path / "model"
     media_path.write_bytes(b"media")
+    model_path.mkdir()
 
     class ModelWithoutWords:
         def transcribe(self, *_: Any, **__: Any) -> tuple[list[Any], Any]:
@@ -96,12 +100,15 @@ def test_transcription_rejects_result_without_word_timestamps(tmp_path: Path) ->
         transcribe_media(
             media_path,
             model_factory=lambda *_args, **_kwargs: ModelWithoutWords(),
+            model_path=model_path,
         )
 
 
 def test_transcription_accepts_media_without_detected_speech(tmp_path: Path) -> None:
     media_path = tmp_path / "silence.mp4"
+    model_path = tmp_path / "model"
     media_path.write_bytes(b"media")
+    model_path.mkdir()
 
     class SilentModel:
         def transcribe(self, *_: Any, **__: Any) -> tuple[list[Any], Any]:
@@ -116,6 +123,30 @@ def test_transcription_accepts_media_without_detected_speech(tmp_path: Path) -> 
     result = transcribe_media(
         media_path,
         model_factory=lambda *_args, **_kwargs: SilentModel(),
+        model_path=model_path,
     )
 
     assert result.segments == ()
+
+
+def test_model_resolution_falls_back_to_home_cache(tmp_path: Path) -> None:
+    model_path = (
+        tmp_path
+        / ".cache"
+        / "huggingface"
+        / "hub"
+        / "models--Systran--faster-whisper-medium"
+        / "snapshots"
+        / MODEL_REVISION
+    )
+    model_path.mkdir(parents=True)
+    (model_path / "model.bin").write_bytes(b"model")
+    (model_path / "config.json").write_text("{}")
+
+    assert (
+        resolve_model_path(
+            environment={"XDG_CACHE_HOME": str(tmp_path / "isolated")},
+            home=tmp_path,
+        )
+        == model_path
+    )

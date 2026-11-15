@@ -41,6 +41,11 @@ from decoupit.sources import (
     get_source,
     list_sources,
 )
+from decoupit.transcripts import (
+    TranscriptionRun,
+    current_profile_hash,
+    get_transcription_run,
+)
 from decoupit.waveform import (
     Waveform,
     get_waveform,
@@ -117,6 +122,20 @@ class WaveformOutput(BaseModel):
     sample_rate: int
     samples_per_point: int
     format_version: int
+    created_at: str
+
+
+class TranscriptionOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    normalized_media_id: str
+    language: str
+    language_probability: float
+    duration_us: int
+    duration_after_vad_us: int
+    segment_count: int
+    word_count: int
     created_at: str
 
 
@@ -503,5 +522,87 @@ def create_app(
         if not waveform.path.is_file():
             raise HTTPException(status_code=404, detail="waveform não encontrado")
         return FileResponse(waveform.path, media_type="application/json")
+
+    @app.post(
+        "/api/projects/{project_id}/sources/{source_id}/transcription",
+        response_model=JobOutput,
+        status_code=202,
+    )
+    def transcription_create(project_id: str, source_id: str) -> Job:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            if normalized is None:
+                raise HTTPException(
+                    status_code=409, detail="a normalização precisa terminar primeiro"
+                )
+            existing = get_transcription_run(
+                connection, normalized.id, current_profile_hash()
+            )
+            if existing is not None:
+                raise HTTPException(
+                    status_code=409, detail="a mídia já possui esta transcrição"
+                )
+            active_job = find_active_source_job(
+                connection, "media.transcribe_words", source_id
+            )
+            if active_job is not None:
+                return active_job
+            try:
+                job_id = enqueue_job(
+                    connection,
+                    kind="media.transcribe_words",
+                    payload={"source_id": source_id},
+                    project_id=project_id,
+                )
+            except sqlite3.IntegrityError:
+                active_job = find_active_source_job(
+                    connection, "media.transcribe_words", source_id
+                )
+                if active_job is None:
+                    raise
+                return active_job
+            return get_job(connection, job_id)
+
+    @app.get(
+        "/api/projects/{project_id}/sources/{source_id}/transcription",
+        response_model=TranscriptionOutput,
+    )
+    def transcription_show(project_id: str, source_id: str) -> TranscriptionRun:
+        with connect_database(app_paths.database) as connection:
+            try:
+                source = get_source(connection, source_id)
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                ) from error
+            if source.project_id != project_id:
+                raise HTTPException(
+                    status_code=404, detail="mídia de origem não encontrada"
+                )
+            normalized = get_normalized_media(connection, source_id)
+            transcription = (
+                None
+                if normalized is None
+                else get_transcription_run(connection, normalized.id)
+            )
+            if transcription is None:
+                raise HTTPException(
+                    status_code=404, detail="transcrição ainda não disponível"
+                )
+            if not transcription.raw_output_path.is_file():
+                raise HTTPException(
+                    status_code=409, detail="o JSON bruto da transcrição está ausente"
+                )
+            return transcription
 
     return app

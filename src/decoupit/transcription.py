@@ -6,7 +6,7 @@ import argparse
 import json
 import os
 import sys
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from importlib.metadata import version
 from importlib.util import find_spec
@@ -94,6 +94,33 @@ def cuda_library_path(environment: dict[str, str] | None = None) -> str:
     return os.pathsep.join(entries)
 
 
+def resolve_model_path(
+    *,
+    environment: Mapping[str, str] | None = None,
+    home: Path | None = None,
+) -> Path:
+    current_environment = os.environ if environment is None else environment
+    user_home = Path.home() if home is None else home
+    cache_roots: list[Path] = []
+    if hub_cache := current_environment.get("HUGGINGFACE_HUB_CACHE"):
+        cache_roots.append(Path(hub_cache))
+    if hf_home := current_environment.get("HF_HOME"):
+        cache_roots.append(Path(hf_home) / "hub")
+    if xdg_cache := current_environment.get("XDG_CACHE_HOME"):
+        cache_roots.append(Path(xdg_cache) / "huggingface" / "hub")
+    cache_roots.append(user_home / ".cache" / "huggingface" / "hub")
+    repository_directory = "models--Systran--faster-whisper-medium"
+    for cache_root in dict.fromkeys(cache_roots):
+        candidate = cache_root / repository_directory / "snapshots" / MODEL_REVISION
+        if (candidate / "model.bin").is_file() and (
+            candidate / "config.json"
+        ).is_file():
+            return candidate
+    raise TranscriptionError(
+        "o modelo Faster Whisper medium não está instalado no cache local"
+    )
+
+
 def _ensure_cuda_runtime(arguments: Sequence[str]) -> None:
     required = [str(path) for path in cuda_library_directories()]
     current = os.environ.get("LD_LIBRARY_PATH", "").split(os.pathsep)
@@ -113,7 +140,7 @@ def _validate_interval(start_us: int, end_us: int, label: str) -> None:
         raise TranscriptionError(f"intervalo inválido em {label}")
 
 
-def _runtime_profile() -> dict[str, Any]:
+def runtime_profile() -> dict[str, Any]:
     profile = dict(PROFILE)
     profile["libraries"] = {
         package: version(package)
@@ -166,6 +193,7 @@ def transcribe_media(
     media_path: Path,
     *,
     model_factory: ModelFactory | None = None,
+    model_path: Path | None = None,
 ) -> TranscriptionResult:
     try:
         canonical_path = media_path.resolve(strict=True)
@@ -177,8 +205,9 @@ def transcribe_media(
         from faster_whisper import WhisperModel
 
         model_factory = WhisperModel
+    resolved_model_path = resolve_model_path() if model_path is None else model_path
     model = model_factory(
-        MODEL_ID,
+        str(resolved_model_path),
         device=PROFILE["device"],
         compute_type=PROFILE["compute_type"],
         cpu_threads=PROFILE["cpu_threads"],
@@ -201,7 +230,7 @@ def transcribe_media(
         duration_us=_seconds_to_us(info.duration),
         duration_after_vad_us=_seconds_to_us(info.duration_after_vad),
         segments=collected_segments,
-        profile=_runtime_profile(),
+        profile=runtime_profile(),
     )
 
 

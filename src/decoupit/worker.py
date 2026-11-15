@@ -24,6 +24,7 @@ from decoupit.job_store import (
 )
 from decoupit.jobs import JobState
 from decoupit.paths import resolve_app_paths
+from decoupit.transcription import cuda_library_path
 
 JobHandler = Callable[[Mapping[str, Any]], Sequence[str]]
 
@@ -92,11 +93,42 @@ def _waveform_command(database_path: Path, cache_root: Path) -> JobHandler:
     return command
 
 
+def _transcription_command(database_path: Path) -> JobHandler:
+    def command(payload: Mapping[str, Any]) -> Sequence[str]:
+        source_id = payload.get("source_id")
+        if not isinstance(source_id, str) or not source_id:
+            raise ValueError("source_id ausente ou inválido")
+        return (
+            "systemd-run",
+            "--user",
+            "--scope",
+            "--quiet",
+            "-p",
+            "MemoryMax=8G",
+            "-p",
+            "MemorySwapMax=2G",
+            "-p",
+            "RuntimeMaxSec=2h",
+            "/usr/bin/env",
+            f"LD_LIBRARY_PATH={cuda_library_path()}",
+            sys.executable,
+            "-m",
+            "decoupit.transcripts",
+            "--database",
+            str(database_path),
+            "--source-id",
+            source_id,
+        )
+
+    return command
+
+
 def _default_handlers(database_path: Path, cache_root: Path) -> dict[str, JobHandler]:
     return {
         "system.noop": _noop_command,
         "media.normalize_cfr30": _normalization_command(database_path),
         "media.generate_waveform": _waveform_command(database_path, cache_root),
+        "media.transcribe_words": _transcription_command(database_path),
     }
 
 
@@ -122,6 +154,14 @@ def _terminate_process_group(process: subprocess.Popen[bytes], timeout: float) -
         with suppress(ProcessLookupError):
             os.killpg(process.pid, signal.SIGKILL)
         process.wait()
+
+
+def _log_tail(path: Path, limit: int = 4000) -> str | None:
+    try:
+        content = path.read_bytes()[-(limit * 4) :].decode(errors="replace").strip()
+    except OSError:
+        return None
+    return content[-limit:] or None
 
 
 def run_next_job(
@@ -151,19 +191,26 @@ def run_next_job(
     if handler is None:
         _record_failure(database_path, job, f"tipo de job não registrado: {job.kind}")
         return True
+    log_directory = database_path.parent / "jobs"
+    log_directory.mkdir(parents=True, exist_ok=True)
+    log_path = log_directory / f"{job.id}.log"
+    log_stream = None
     try:
         command = tuple(handler(job.payload))
         if not command or not all(isinstance(part, str) and part for part in command):
             raise ValueError("comando vazio ou inválido")
+        log_stream = log_path.open("wb")
         process = subprocess.Popen(
             command,
             stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=log_stream,
+            stderr=subprocess.STDOUT,
             start_new_session=True,
             close_fds=True,
         )
     except (OSError, ValueError) as error:
+        if log_stream is not None:
+            log_stream.close()
         _record_failure(database_path, job, f"falha ao iniciar subprocesso: {error}")
         return True
 
@@ -176,6 +223,7 @@ def run_next_job(
                 state = get_job(connection, job.id).state
             if state is JobState.CANCEL_REQUESTED:
                 _terminate_process_group(process, terminate_timeout)
+                log_stream.close()
                 with connect_database(database_path) as connection:
                     finish_job(connection, job.id, JobState.CANCELLED)
                 return True
@@ -184,22 +232,29 @@ def run_next_job(
         try:
             _terminate_process_group(process, terminate_timeout)
         finally:
+            log_stream.close()
             with connect_database(database_path) as connection:
                 recover_job(connection, job.id)
         raise
 
+    log_stream.close()
     with connect_database(database_path) as connection:
         state = get_job(connection, job.id).state
         if state is JobState.CANCEL_REQUESTED:
             finish_job(connection, job.id, JobState.CANCELLED)
         elif process.returncode == 0:
             finish_job(connection, job.id, JobState.SUCCEEDED)
+            log_path.unlink(missing_ok=True)
         else:
+            detail = _log_tail(log_path)
+            message = f"subprocesso terminou com código {process.returncode}"
+            if detail:
+                message = f"{message}: {detail}"
             finish_job(
                 connection,
                 job.id,
                 JobState.FAILED,
-                error_message=f"subprocesso terminou com código {process.returncode}",
+                error_message=message,
             )
     return True
 

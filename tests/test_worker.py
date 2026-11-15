@@ -9,7 +9,12 @@ import pytest
 from decoupit.database import connect_database, initialize_database
 from decoupit.job_store import enqueue_job, get_job, request_cancellation
 from decoupit.jobs import JobState
-from decoupit.worker import _normalization_command, _waveform_command, run_next_job
+from decoupit.worker import (
+    _normalization_command,
+    _transcription_command,
+    _waveform_command,
+    run_next_job,
+)
 
 
 def test_normalization_command_has_explicit_resource_limits(tmp_path: Path) -> None:
@@ -49,6 +54,23 @@ def test_waveform_command_has_explicit_resource_limits(tmp_path: Path) -> None:
     )
 
 
+def test_transcription_command_has_explicit_resource_limits(tmp_path: Path) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    command = tuple(_transcription_command(database_path)({"source_id": "source-1"}))
+
+    assert command[:4] == ("systemd-run", "--user", "--scope", "--quiet")
+    assert "MemoryMax=8G" in command
+    assert "MemorySwapMax=2G" in command
+    assert "RuntimeMaxSec=2h" in command
+    assert any(part.startswith("LD_LIBRARY_PATH=") for part in command)
+    assert command[-4:] == (
+        "--database",
+        str(database_path),
+        "--source-id",
+        "source-1",
+    )
+
+
 def test_worker_completes_registered_job_in_subprocess(tmp_path: Path) -> None:
     database_path = tmp_path / "decoupit.sqlite3"
     initialize_database(database_path)
@@ -76,6 +98,31 @@ def test_worker_fails_unknown_job_without_spawning(tmp_path: Path) -> None:
     assert job.state is JobState.FAILED
     assert job.process_id is None
     assert job.error_message == "tipo de job não registrado: unknown"
+
+
+def test_worker_records_failed_subprocess_output(tmp_path: Path) -> None:
+    database_path = tmp_path / "decoupit.sqlite3"
+    initialize_database(database_path)
+    with connect_database(database_path) as connection:
+        job_id = enqueue_job(connection, kind="test.failure")
+
+    handlers = {
+        "test.failure": lambda _: [
+            sys.executable,
+            "-c",
+            "import sys;sys.stderr.write('diagnóstico útil');raise SystemExit(7)",
+        ]
+    }
+
+    assert run_next_job(database_path, handlers=handlers) is True
+
+    with connect_database(database_path) as connection:
+        job = get_job(connection, job_id)
+    assert job.state is JobState.FAILED
+    assert job.error_message is not None
+    assert "código 7" in job.error_message
+    assert "diagnóstico útil" in job.error_message
+    assert (tmp_path / "jobs" / f"{job_id}.log").is_file()
 
 
 def test_worker_cancels_complete_process_group(tmp_path: Path) -> None:

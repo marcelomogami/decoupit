@@ -32,6 +32,9 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
         "projects",
         "schema_migrations",
         "source_media",
+        "transcript_segments",
+        "transcript_words",
+        "transcription_runs",
         "waveforms",
     } <= tables
     assert dict(migration) == {
@@ -39,7 +42,7 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
         "name": "create_projects",
         "checksum_length": 64,
     }
-    assert schema_version == 5
+    assert schema_version == 6
     assert foreign_keys == 1
 
 
@@ -54,7 +57,7 @@ def test_initialize_database_is_idempotent(tmp_path: Path) -> None:
             0
         ]
 
-    assert count == 5
+    assert count == 6
 
 
 def test_project_constraints_reject_invalid_state(tmp_path: Path) -> None:
@@ -103,7 +106,7 @@ def test_existing_database_is_backed_up_before_pending_migration(
 ) -> None:
     database_path = tmp_path / "decoupit.sqlite3"
     migrations = database_module._load_migrations()
-    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations[:4])
+    monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations[:5])
     initialize_database(database_path)
     with connect_database(database_path) as connection:
         connection.execute(
@@ -114,7 +117,7 @@ def test_existing_database_is_backed_up_before_pending_migration(
     monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations)
     initialize_database(database_path)
 
-    backups = list((tmp_path / "backups").glob("*-before-v0005.sqlite3"))
+    backups = list((tmp_path / "backups").glob("*-before-v0006.sqlite3"))
     assert len(backups) == 1
     with connect_database(backups[0]) as connection:
         project = connection.execute(
@@ -122,4 +125,4 @@ def test_existing_database_is_backed_up_before_pending_migration(
         ).fetchone()
         version = connection.execute("PRAGMA user_version").fetchone()[0]
     assert project["name"] == "Preservado"
-    assert version == 4
+    assert version == 5
