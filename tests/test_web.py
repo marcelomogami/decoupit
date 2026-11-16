@@ -285,6 +285,8 @@ def test_enqueue_waveform_only_after_normalization(tmp_path: Path) -> None:
     assert "selectSearchMatch" in review_script.text
     assert "renderReviewIntervals" in review_script.text
     assert "createReviewInterval" in review_script.text
+    assert "intervalClassificationField" in review_script.text
+    assert '"primary", "Principal"' in review_script.text
     assert created.status_code == 202
     assert created.json()["kind"] == "media.generate_waveform"
     assert duplicate.json()["id"] == created.json()["id"]

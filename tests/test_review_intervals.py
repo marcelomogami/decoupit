@@ -1,3 +1,4 @@
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -72,6 +73,7 @@ def test_review_interval_crud_persists_frame_boundaries(tmp_path: Path) -> None:
             end_frame=8,
             frame_count=30,
         )
+        assert created.classification is None
         assert list_review_intervals(connection, normalized_media_id) == [created]
         updated = update_review_interval(
             connection,
@@ -80,7 +82,15 @@ def test_review_interval_crud_persists_frame_boundaries(tmp_path: Path) -> None:
             start_frame=4,
             end_frame=10,
             frame_count=30,
+            classification="primary",
         )
+        assert updated.classification == "primary"
+        with pytest.raises(sqlite3.IntegrityError):
+            connection.execute(
+                "UPDATE review_intervals SET classification = 'favorite' WHERE id = ?",
+                (created.id,),
+            )
+        connection.rollback()
 
     with connect_database(database_path) as connection:
         assert list_review_intervals(connection, normalized_media_id) == [updated]
@@ -117,6 +127,23 @@ def test_review_interval_rejects_invalid_frame_boundaries(
         )
 
 
+def test_review_interval_rejects_invalid_classification(tmp_path: Path) -> None:
+    database_path, normalized_media_id, _, _ = _normalized_media(tmp_path)
+
+    with (
+        connect_database(database_path) as connection,
+        pytest.raises(ReviewIntervalError, match="classificação"),
+    ):
+        create_review_interval(
+            connection,
+            normalized_media_id,
+            start_frame=0,
+            end_frame=1,
+            frame_count=30,
+            classification="favorite",  # type: ignore[arg-type]
+        )
+
+
 def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> None:
     database_path, _, project_id, source_id = _normalized_media(tmp_path)
     paths = AppPaths(database_path.parent, tmp_path / "cache")
@@ -129,6 +156,15 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
             json={"start_frame": 0, "end_frame": 30},
             headers={"Origin": "http://testserver"},
         )
+        invalid_classification = client.post(
+            endpoint,
+            json={
+                "start_frame": 0,
+                "end_frame": 1,
+                "classification": "favorite",
+            },
+            headers={"Origin": "http://testserver"},
+        )
         created = client.post(
             endpoint,
             json={"start_frame": 3, "end_frame": 8},
@@ -138,6 +174,15 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
         updated = client.patch(
             interval_endpoint,
             json={"start_frame": 4, "end_frame": 10},
+            headers={"Origin": "http://testserver"},
+        )
+        classified = client.patch(
+            interval_endpoint,
+            json={
+                "start_frame": 4,
+                "end_frame": 10,
+                "classification": "alternative",
+            },
             headers={"Origin": "http://testserver"},
         )
 
@@ -155,12 +200,16 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
 
     assert empty.json() == []
     assert invalid.status_code == 422
+    assert invalid_classification.status_code == 422
     assert created.status_code == 201
     assert created.json()["start_frame"] == 3
     assert created.json()["end_frame"] == 8
+    assert created.json()["classification"] is None
     assert updated.status_code == 200
     assert updated.json()["start_frame"] == 4
     assert updated.json()["end_frame"] == 10
-    assert listed.json() == [updated.json()]
+    assert updated.json()["classification"] is None
+    assert classified.json()["classification"] == "alternative"
+    assert listed.json() == [classified.json()]
     assert deleted.status_code == 204
     assert missing.status_code == 404

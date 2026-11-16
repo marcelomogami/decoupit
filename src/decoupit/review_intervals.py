@@ -5,6 +5,10 @@ from __future__ import annotations
 import sqlite3
 import uuid
 from dataclasses import dataclass
+from typing import Literal
+
+ReviewClassification = Literal["primary", "alternative", "blooper", "discard"]
+REVIEW_CLASSIFICATIONS = frozenset({"primary", "alternative", "blooper", "discard"})
 
 
 class ReviewIntervalError(ValueError):
@@ -17,6 +21,7 @@ class ReviewInterval:
     normalized_media_id: str
     start_frame: int
     end_frame: int
+    classification: ReviewClassification | None
     created_at: str
     updated_at: str
 
@@ -27,6 +32,7 @@ def _interval_from_row(row: sqlite3.Row) -> ReviewInterval:
         normalized_media_id=row["normalized_media_id"],
         start_frame=row["start_frame"],
         end_frame=row["end_frame"],
+        classification=row["classification"],
         created_at=row["created_at"],
         updated_at=row["updated_at"],
     )
@@ -46,6 +52,11 @@ def _validate_frames(start_frame: int, end_frame: int, frame_count: int) -> None
         raise ReviewIntervalError("o quadro final não pode vir antes do inicial")
     if frame_count <= 0 or end_frame >= frame_count:
         raise ReviewIntervalError("o quadro final está fora da mídia")
+
+
+def _validate_classification(classification: str | None) -> None:
+    if classification is not None and classification not in REVIEW_CLASSIFICATIONS:
+        raise ReviewIntervalError("a classificação do intervalo é inválida")
 
 
 def list_review_intervals(
@@ -69,16 +80,18 @@ def create_review_interval(
     start_frame: int,
     end_frame: int,
     frame_count: int,
+    classification: ReviewClassification | None = None,
 ) -> ReviewInterval:
     _validate_frames(start_frame, end_frame, frame_count)
+    _validate_classification(classification)
     identifier = str(uuid.uuid4())
     connection.execute(
         """
         INSERT INTO review_intervals (
-            id, normalized_media_id, start_frame, end_frame
-        ) VALUES (?, ?, ?, ?)
+            id, normalized_media_id, start_frame, end_frame, classification
+        ) VALUES (?, ?, ?, ?, ?)
         """,
-        (identifier, normalized_media_id, start_frame, end_frame),
+        (identifier, normalized_media_id, start_frame, end_frame, classification),
     )
     connection.commit()
     row = connection.execute(
@@ -97,16 +110,24 @@ def update_review_interval(
     start_frame: int,
     end_frame: int,
     frame_count: int,
+    classification: ReviewClassification | None = None,
 ) -> ReviewInterval:
     _validate_frames(start_frame, end_frame, frame_count)
+    _validate_classification(classification)
     cursor = connection.execute(
         """
         UPDATE review_intervals
-        SET start_frame = ?, end_frame = ?,
+        SET start_frame = ?, end_frame = ?, classification = ?,
             updated_at = strftime('%Y-%m-%dT%H:%M:%fZ', 'now')
         WHERE id = ? AND normalized_media_id = ?
         """,
-        (start_frame, end_frame, interval_id, normalized_media_id),
+        (
+            start_frame,
+            end_frame,
+            classification,
+            interval_id,
+            normalized_media_id,
+        ),
     )
     if cursor.rowcount == 0:
         connection.rollback()

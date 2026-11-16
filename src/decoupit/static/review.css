@@ -298,6 +298,22 @@ video {
   background: #24272d;
 }
 
+.review-interval[data-classification="primary"] {
+  border-left: 4px solid #68c98c;
+}
+
+.review-interval[data-classification="alternative"] {
+  border-left: 4px solid #68a9df;
+}
+
+.review-interval[data-classification="blooper"] {
+  border-left: 4px solid #c493e8;
+}
+
+.review-interval[data-classification="discard"] {
+  border-left: 4px solid #e88491;
+}
+
 .review-interval form {
   flex-wrap: wrap;
 }
@@ -310,14 +326,18 @@ video {
   font-size: 0.8rem;
 }
 
-.review-interval input {
-  width: 8ch;
+.review-interval input,
+.review-interval select {
   border: 1px solid #5a606b;
   border-radius: 4px;
   background: #17191d;
   color: #f4f4f5;
   padding: 6px;
   font-variant-numeric: tabular-nums;
+}
+
+.review-interval input {
+  width: 8ch;
 }
 
 .review-interval button.danger {

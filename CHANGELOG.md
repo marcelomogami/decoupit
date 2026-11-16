@@ -15,6 +15,8 @@ Python.
   ajuste e exclusão por API local.
 - Controles na tela de revisão para marcar entrada e saída, navegar ao início e
   editar os limites numericamente.
+- Classificação humana de intervalos como principal, alternativa, blooper ou
+  descarte, preservando também o estado ainda não classificado.
 
 ## [0.3.0] - 2026-11-15
 

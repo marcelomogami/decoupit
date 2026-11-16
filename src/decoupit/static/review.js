@@ -33,6 +33,14 @@ let currentMatchIndex = -1;
 let pendingIntervalStartFrame = null;
 let reviewIntervals = [];
 
+const reviewClassifications = [
+  ["", "Sem classificação"],
+  ["primary", "Principal"],
+  ["alternative", "Alternativa"],
+  ["blooper", "Blooper"],
+  ["discard", "Descarte"],
+];
+
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
   const hours = Math.floor(milliseconds / 3600000);
@@ -270,6 +278,22 @@ function intervalField(labelText, value) {
   return { label, input };
 }
 
+function intervalClassificationField(value) {
+  const label = document.createElement("label");
+  const text = document.createElement("span");
+  text.textContent = "Classificação";
+  const select = document.createElement("select");
+  for (const [optionValue, optionLabel] of reviewClassifications) {
+    const option = document.createElement("option");
+    option.value = optionValue;
+    option.textContent = optionLabel;
+    option.selected = optionValue === (value || "");
+    select.append(option);
+  }
+  label.append(text, select);
+  return { label, select };
+}
+
 function renderReviewIntervals() {
   reviewIntervalList.replaceChildren();
   if (reviewIntervals.length === 0) {
@@ -286,9 +310,11 @@ function renderReviewIntervals() {
   for (const interval of reviewIntervals) {
     const item = document.createElement("li");
     item.className = "review-interval";
+    item.dataset.classification = interval.classification || "unclassified";
     const form = document.createElement("form");
     const start = intervalField("Entrada", interval.start_frame);
     const end = intervalField("Saída", interval.end_frame);
+    const classification = intervalClassificationField(interval.classification);
     const seek = document.createElement("button");
     seek.type = "button";
     seek.textContent = "Ir";
@@ -332,6 +358,7 @@ function renderReviewIntervals() {
             body: JSON.stringify({
               start_frame: startFrame,
               end_frame: endFrame,
+              classification: classification.select.value || null,
             }),
           },
         );
@@ -344,7 +371,14 @@ function renderReviewIntervals() {
         intervalMessage.textContent = error.message;
       }
     });
-    form.append(start.label, end.label, seek, save, remove);
+    form.append(
+      start.label,
+      end.label,
+      classification.label,
+      seek,
+      save,
+      remove,
+    );
     item.append(form);
     reviewIntervalList.append(item);
   }

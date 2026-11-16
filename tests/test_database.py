@@ -43,7 +43,7 @@ def test_initialize_database_applies_initial_migration(tmp_path: Path) -> None:
         "name": "create_projects",
         "checksum_length": 64,
     }
-    assert schema_version == 7
+    assert schema_version == 8
     assert foreign_keys == 1
 
 
@@ -58,7 +58,7 @@ def test_initialize_database_is_idempotent(tmp_path: Path) -> None:
             0
         ]
 
-    assert count == 7
+    assert count == 8
 
 
 def test_project_constraints_reject_invalid_state(tmp_path: Path) -> None:
@@ -118,7 +118,7 @@ def test_existing_database_is_backed_up_before_pending_migration(
     monkeypatch.setattr(database_module, "_load_migrations", lambda: migrations)
     initialize_database(database_path)
 
-    backups = list((tmp_path / "backups").glob("*-before-v0007.sqlite3"))
+    backups = list((tmp_path / "backups").glob("*-before-v0008.sqlite3"))
     assert len(backups) == 1
     with connect_database(backups[0]) as connection:
         project = connection.execute(

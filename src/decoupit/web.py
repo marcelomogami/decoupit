@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from html import escape
 from importlib.metadata import version
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
@@ -181,6 +181,9 @@ class TranscriptDocumentOutput(BaseModel):
 class ReviewIntervalInput(BaseModel):
     start_frame: Annotated[int, Field(strict=True, ge=0)]
     end_frame: Annotated[int, Field(strict=True, ge=0)]
+    classification: Literal["primary", "alternative", "blooper", "discard"] | None = (
+        None
+    )
 
 
 class ReviewIntervalOutput(BaseModel):
@@ -190,6 +193,7 @@ class ReviewIntervalOutput(BaseModel):
     normalized_media_id: str
     start_frame: int
     end_frame: int
+    classification: Literal["primary", "alternative", "blooper", "discard"] | None
     created_at: str
     updated_at: str
 
@@ -813,6 +817,7 @@ def create_app(
                     start_frame=interval.start_frame,
                     end_frame=interval.end_frame,
                     frame_count=frame_count,
+                    classification=interval.classification,
                 )
             except ReviewIntervalError as error:
                 raise HTTPException(status_code=422, detail=str(error)) from error
@@ -837,6 +842,7 @@ def create_app(
                     start_frame=interval.start_frame,
                     end_frame=interval.end_frame,
                     frame_count=frame_count,
+                    classification=interval.classification,
                 )
             except KeyError as error:
                 raise HTTPException(
