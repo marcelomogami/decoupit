@@ -12,10 +12,10 @@ CFR 30 pelo worker. A página inicial de operação ainda não existe, mas a tel
 de revisão já reproduz o vídeo, mostra o waveform, acompanha tempo e quadros e
 oferece uma transcrição pesquisável.
 
-Versão de desenvolvimento atual: `0.4.0.dev0`. A fundação `0.1.0`, a
-ingestão e normalização `0.2.0` e a transcrição navegável `0.3.0` estão
-concluídas; a revisão manual persistente está em desenvolvimento. As mudanças
-são registradas no [CHANGELOG.md](CHANGELOG.md).
+Versão atual: `0.4.0`. A fundação `0.1.0`, a
+ingestão e normalização `0.2.0`, a transcrição navegável `0.3.0` e a revisão
+manual persistente `0.4.0` estão concluídas. A exportação para edição segue em
+desenvolvimento. As mudanças são registradas no [CHANGELOG.md](CHANGELOG.md).
 
 Já é possível cadastrar um vídeo bruto por caminho absoluto em um projeto. O
 DecoupIt consulta `ffprobe`, registra a identidade e os metadados do arquivo e
