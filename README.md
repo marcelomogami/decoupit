@@ -142,7 +142,8 @@ Cada palavra pode ser clicada para levar o player ao seu início sem começar a
 reprodução. A busca ignora maiúsculas, minúsculas e acentos, aceita frases e
 permite navegar pelas ocorrências anteriores e seguintes. Quando a transcrição
 está disponível, a mesma tela oferece o download de um SRT compatível com o
-Kdenlive.
+Kdenlive. Os cues são formados a partir das palavras alinhadas e não dos chunks
+internos usados pelo WhisperX.
 
 ## Privacidade
 
