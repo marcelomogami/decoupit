@@ -283,6 +283,22 @@ video {
   font-size: 0.85rem;
 }
 
+.shortcut-hint {
+  margin: 10px 0 0;
+  color: #b4b7bd;
+  font-size: 0.85rem;
+}
+
+.shortcut-hint kbd {
+  padding: 1px 4px;
+  border: 1px solid #5a606b;
+  border-radius: 3px;
+  background: #17191d;
+  color: #f4f4f5;
+  font-family: inherit;
+  font-size: 0.8rem;
+}
+
 #review-interval-list {
   display: grid;
   gap: 8px;

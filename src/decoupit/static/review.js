@@ -41,6 +41,7 @@ const reviewClassifications = [
   ["discard", "Descarte"],
 ];
 const contextFrameMargin = 90;
+const frameRoundingTolerance = 0.0001;
 let contextEndTime = null;
 
 function formatTime(seconds) {
@@ -55,7 +56,12 @@ function formatTime(seconds) {
 }
 
 function frameAt(seconds) {
-  const frame = Math.floor(Math.max(0, seconds) * fps + 1e-7);
+  const frameValue = Math.max(0, seconds) * fps;
+  const nearestFrame = Math.round(frameValue);
+  const frame =
+    Math.abs(frameValue - nearestFrame) < frameRoundingTolerance
+      ? nearestFrame
+      : Math.floor(frameValue);
   return Math.min(Math.max(0, frame), frameCount - 1);
 }
 
@@ -555,6 +561,36 @@ function seekToRatio(ratio) {
   updatePosition();
 }
 
+function stepFrame(direction) {
+  contextEndTime = null;
+  const targetFrame = Math.min(
+    frameCount - 1,
+    Math.max(0, frameAt(player.currentTime) + direction),
+  );
+  player.currentTime = targetFrame / fps;
+  updatePosition(player.currentTime);
+}
+
+async function togglePlayback() {
+  contextEndTime = null;
+  if (player.paused) {
+    try {
+      await player.play();
+    } catch {
+      intervalMessage.textContent = "O navegador não conseguiu iniciar a reprodução.";
+    }
+    return;
+  }
+  player.pause();
+}
+
+function shortcutUsesEditableTarget(target) {
+  return (
+    target instanceof Element &&
+    target.closest("input, select, textarea, button, a, [contenteditable='true']")
+  );
+}
+
 canvas.addEventListener("pointerdown", (event) => {
   const bounds = canvas.getBoundingClientRect();
   seekToRatio((event.clientX - bounds.left) / bounds.width);
@@ -566,12 +602,43 @@ canvas.addEventListener("keydown", (event) => {
   }
   event.preventDefault();
   const direction = event.key === "ArrowLeft" ? -1 : 1;
-  const targetFrame = Math.min(
-    frameCount - 1,
-    Math.max(0, frameAt(player.currentTime) + direction),
-  );
-  player.currentTime = targetFrame / fps;
-  updatePosition(player.currentTime);
+  stepFrame(direction);
+});
+
+window.addEventListener("keydown", (event) => {
+  if (
+    event.defaultPrevented ||
+    event.altKey ||
+    event.ctrlKey ||
+    event.metaKey ||
+    shortcutUsesEditableTarget(event.target)
+  ) {
+    return;
+  }
+  switch (event.key.toLowerCase()) {
+    case "i":
+      event.preventDefault();
+      markReviewIntervalStart();
+      break;
+    case "o":
+      if (!createInterval.disabled) {
+        event.preventDefault();
+        createReviewInterval();
+      }
+      break;
+    case "j":
+      event.preventDefault();
+      stepFrame(-1);
+      break;
+    case "k":
+      event.preventDefault();
+      togglePlayback();
+      break;
+    case "l":
+      event.preventDefault();
+      stepFrame(1);
+      break;
+  }
 });
 
 player.addEventListener("loadedmetadata", () => {

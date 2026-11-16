@@ -289,6 +289,10 @@ def test_enqueue_waveform_only_after_normalization(tmp_path: Path) -> None:
     assert '"primary", "Principal"' in review_script.text
     assert "playReviewIntervalContext" in review_script.text
     assert "contextFrameMargin = 90" in review_script.text
+    assert "frameRoundingTolerance" in review_script.text
+    assert "shortcutUsesEditableTarget" in review_script.text
+    assert "togglePlayback" in review_script.text
+    assert "Atalhos:" in review.text
     assert created.status_code == 202
     assert created.json()["kind"] == "media.generate_waveform"
     assert duplicate.json()["id"] == created.json()["id"]

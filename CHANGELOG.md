@@ -19,6 +19,8 @@ Python.
   descarte, preservando também o estado ainda não classificado.
 - Reprodução de contexto de três segundos antes e depois de cada intervalo,
   interrompida automaticamente ao fim da margem posterior.
+- Atalhos globais de revisão: `I` para entrada, `O` para criar intervalo,
+  `J` e `L` para navegar por quadro e `K` para reproduzir ou pausar.
 
 ## [0.3.0] - 2026-11-15
 

@@ -569,6 +569,11 @@ def create_app(
             </button>
           </div>
         </div>
+        <p class="shortcut-hint">
+          Atalhos: <kbd>I</kbd> entrada, <kbd>O</kbd> criar intervalo,
+          <kbd>J</kbd>/<kbd>L</kbd> quadro anterior ou próximo e <kbd>K</kbd>
+          reproduzir ou pausar.
+        </p>
         <output id="interval-pending">Nenhuma entrada marcada.</output>
         <p id="interval-message" role="status"></p>
         <ol id="review-interval-list"></ol>

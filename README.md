@@ -149,7 +149,8 @@ A revisão manual em desenvolvimento já permite marcar entrada e saída no
 player, persistir o intervalo em quadros CFR 30, ajustar os dois limites e
 classificá-lo como principal, alternativa, blooper ou descarte. A lista pode
 ser retomada depois de fechar a página, e cada intervalo pode ser ouvido com
-três segundos de contexto antes e depois.
+três segundos de contexto antes e depois. Atalhos de revisão permitem marcar
+entrada, criar o intervalo, navegar por quadro e controlar a reprodução.
 
 ## Privacidade
 
