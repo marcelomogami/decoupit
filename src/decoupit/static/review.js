@@ -42,7 +42,9 @@ const reviewClassifications = [
 ];
 const contextFrameMargin = 90;
 const frameRoundingTolerance = 0.0001;
+const autoSaveDelayMs = 600;
 let contextEndTime = null;
+const reviewIntervalSaveStates = new Map();
 
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
@@ -340,6 +342,120 @@ async function playReviewIntervalContext(interval) {
   }
 }
 
+function reviewIntervalSaveState(intervalId) {
+  let state = reviewIntervalSaveStates.get(intervalId);
+  if (!state) {
+    state = { revision: 0, saving: false, timer: null, deleted: false };
+    reviewIntervalSaveStates.set(intervalId, state);
+  }
+  return state;
+}
+
+function reviewIntervalPayload(start, end, classification) {
+  if (
+    !start.input.validity.valid ||
+    !end.input.validity.valid ||
+    start.input.value === "" ||
+    end.input.value === ""
+  ) {
+    return null;
+  }
+  const startFrame = Number(start.input.value);
+  const endFrame = Number(end.input.value);
+  if (!Number.isInteger(startFrame) || !Number.isInteger(endFrame) || endFrame < startFrame) {
+    return null;
+  }
+  return {
+    start_frame: startFrame,
+    end_frame: endFrame,
+    classification: classification.select.value || null,
+  };
+}
+
+function contextTitle(interval) {
+  const range = contextRange(interval);
+  return "Reproduzir dos quadros " + range.startFrame + " a " + range.endFrame + ".";
+}
+
+async function saveReviewInterval(
+  interval,
+  item,
+  start,
+  end,
+  classification,
+  context,
+) {
+  const state = reviewIntervalSaveState(interval.id);
+  if (state.saving || state.deleted) {
+    return;
+  }
+  const payload = reviewIntervalPayload(start, end, classification);
+  if (!payload) {
+    intervalMessage.textContent = "Ajuste os quadros antes de salvar.";
+    return;
+  }
+  state.saving = true;
+  const revision = state.revision;
+  intervalMessage.textContent = "Salvando alterações...";
+  try {
+    const updated = await intervalRequest(reviewIntervalsUrl + "/" + interval.id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!state.deleted) {
+      Object.assign(interval, updated);
+      reviewIntervals = reviewIntervals.map((candidate) =>
+        candidate.id === updated.id ? updated : candidate,
+      );
+      item.dataset.classification = updated.classification || "unclassified";
+      context.title = contextTitle(updated);
+      if (state.revision === revision) {
+        intervalMessage.textContent = "Alterações salvas.";
+      }
+    }
+  } catch (error) {
+    if (!state.deleted) {
+      intervalMessage.textContent = error.message;
+    }
+  } finally {
+    state.saving = false;
+    if (!state.deleted && state.revision > revision) {
+      void saveReviewInterval(interval, item, start, end, classification, context);
+    }
+  }
+}
+
+function requestReviewIntervalSave(
+  interval,
+  item,
+  start,
+  end,
+  classification,
+  context,
+  immediate = false,
+) {
+  const state = reviewIntervalSaveState(interval.id);
+  state.revision += 1;
+  if (state.timer !== null) {
+    window.clearTimeout(state.timer);
+    state.timer = null;
+  }
+  if (!reviewIntervalPayload(start, end, classification)) {
+    intervalMessage.textContent = "Ajuste os quadros antes de salvar.";
+    return;
+  }
+  if (immediate) {
+    void saveReviewInterval(interval, item, start, end, classification, context);
+    return;
+  }
+  intervalMessage.textContent = "Alterações pendentes...";
+  state.timer = window.setTimeout(() => {
+    state.timer = null;
+    void saveReviewInterval(interval, item, start, end, classification, context);
+  }, autoSaveDelayMs);
+}
+
 function renderReviewIntervals() {
   reviewIntervalList.replaceChildren();
   if (reviewIntervals.length === 0) {
@@ -362,11 +478,9 @@ function renderReviewIntervals() {
     const end = intervalField("Saída", interval.end_frame);
     const classification = intervalClassificationField(interval.classification);
     const context = document.createElement("button");
-    const range = contextRange(interval);
     context.type = "button";
     context.textContent = "Contexto";
-    context.title =
-      "Reproduzir dos quadros " + range.startFrame + " a " + range.endFrame + ".";
+    context.title = contextTitle(interval);
     context.addEventListener("click", () => playReviewIntervalContext(interval));
     const seek = document.createElement("button");
     seek.type = "button";
@@ -378,12 +492,18 @@ function renderReviewIntervals() {
     });
     const save = document.createElement("button");
     save.type = "submit";
-    save.textContent = "Salvar";
+    save.textContent = "Salvar agora";
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "danger";
     remove.textContent = "Excluir";
     remove.addEventListener("click", async () => {
+      const saveState = reviewIntervalSaveState(interval.id);
+      saveState.deleted = true;
+      if (saveState.timer !== null) {
+        window.clearTimeout(saveState.timer);
+        saveState.timer = null;
+      }
       intervalMessage.textContent = "Excluindo intervalo...";
       try {
         await intervalRequest(reviewIntervalsUrl + "/" + interval.id, {
@@ -392,39 +512,31 @@ function renderReviewIntervals() {
         reviewIntervals = reviewIntervals.filter(
           (candidate) => candidate.id !== interval.id,
         );
+        reviewIntervalSaveStates.delete(interval.id);
         renderReviewIntervals();
         intervalMessage.textContent = "Intervalo excluído.";
       } catch (error) {
+        saveState.deleted = false;
         intervalMessage.textContent = error.message;
       }
     });
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      const startFrame = Number(start.input.value);
-      const endFrame = Number(end.input.value);
-      intervalMessage.textContent = "Salvando intervalo...";
-      try {
-        const updated = await intervalRequest(
-          reviewIntervalsUrl + "/" + interval.id,
-          {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              start_frame: startFrame,
-              end_frame: endFrame,
-              classification: classification.select.value || null,
-            }),
-          },
-        );
-        reviewIntervals = reviewIntervals.map((candidate) =>
-          candidate.id === updated.id ? updated : candidate,
-        );
-        renderReviewIntervals();
-        intervalMessage.textContent = "Intervalo atualizado.";
-      } catch (error) {
-        intervalMessage.textContent = error.message;
-      }
+      requestReviewIntervalSave(
+        interval,
+        item,
+        start,
+        end,
+        classification,
+        context,
+        true,
+      );
     });
+    const queueSave = () =>
+      requestReviewIntervalSave(interval, item, start, end, classification, context);
+    start.input.addEventListener("input", queueSave);
+    end.input.addEventListener("input", queueSave);
+    classification.select.addEventListener("change", queueSave);
     form.append(
       start.label,
       end.label,

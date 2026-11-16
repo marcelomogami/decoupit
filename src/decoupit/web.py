@@ -574,6 +574,9 @@ def create_app(
           <kbd>J</kbd>/<kbd>L</kbd> quadro anterior ou próximo e <kbd>K</kbd>
           reproduzir ou pausar.
         </p>
+        <p class="autosave-hint">
+          Alterações em intervalos são salvas automaticamente.
+        </p>
         <output id="interval-pending">Nenhuma entrada marcada.</output>
         <p id="interval-message" role="status"></p>
         <ol id="review-interval-list"></ol>

@@ -21,6 +21,8 @@ Python.
   interrompida automaticamente ao fim da margem posterior.
 - Atalhos globais de revisão: `I` para entrada, `O` para criar intervalo,
   `J` e `L` para navegar por quadro e `K` para reproduzir ou pausar.
+- Salvamento automático de limites e classificação após uma breve pausa na
+  edição, com prevenção de gravação de limites inválidos.
 
 ## [0.3.0] - 2026-11-15
 

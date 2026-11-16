@@ -283,7 +283,8 @@ video {
   font-size: 0.85rem;
 }
 
-.shortcut-hint {
+.shortcut-hint,
+.autosave-hint {
   margin: 10px 0 0;
   color: #b4b7bd;
   font-size: 0.85rem;
