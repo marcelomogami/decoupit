@@ -148,7 +148,8 @@ internos usados pelo WhisperX.
 A revisão manual em desenvolvimento já permite marcar entrada e saída no
 player, persistir o intervalo em quadros CFR 30, ajustar os dois limites e
 classificá-lo como principal, alternativa, blooper ou descarte. A lista pode
-ser retomada depois de fechar a página.
+ser retomada depois de fechar a página, e cada intervalo pode ser ouvido com
+três segundos de contexto antes e depois.
 
 ## Privacidade
 

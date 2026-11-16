@@ -40,6 +40,8 @@ const reviewClassifications = [
   ["blooper", "Blooper"],
   ["discard", "Descarte"],
 ];
+const contextFrameMargin = 90;
+let contextEndTime = null;
 
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
@@ -294,6 +296,44 @@ function intervalClassificationField(value) {
   return { label, select };
 }
 
+function contextRange(interval) {
+  return {
+    startFrame: Math.max(0, interval.start_frame - contextFrameMargin),
+    endFrame: Math.min(frameCount - 1, interval.end_frame + contextFrameMargin),
+  };
+}
+
+function stopContextPlayback() {
+  if (contextEndTime === null || player.currentTime + 0.0001 < contextEndTime) {
+    return;
+  }
+  player.pause();
+  player.currentTime = contextEndTime;
+  contextEndTime = null;
+  updatePosition(player.currentTime);
+  intervalMessage.textContent = "Contexto concluído.";
+}
+
+async function playReviewIntervalContext(interval) {
+  const range = contextRange(interval);
+  const startTime = range.startFrame / fps;
+  contextEndTime = (range.endFrame + 1) / fps;
+  player.currentTime = startTime;
+  updatePosition(startTime);
+  intervalMessage.textContent =
+    "Reproduzindo contexto dos quadros " +
+    range.startFrame +
+    " a " +
+    range.endFrame +
+    ".";
+  try {
+    await player.play();
+  } catch {
+    contextEndTime = null;
+    intervalMessage.textContent = "O navegador não conseguiu iniciar o contexto.";
+  }
+}
+
 function renderReviewIntervals() {
   reviewIntervalList.replaceChildren();
   if (reviewIntervals.length === 0) {
@@ -315,10 +355,18 @@ function renderReviewIntervals() {
     const start = intervalField("Entrada", interval.start_frame);
     const end = intervalField("Saída", interval.end_frame);
     const classification = intervalClassificationField(interval.classification);
+    const context = document.createElement("button");
+    const range = contextRange(interval);
+    context.type = "button";
+    context.textContent = "Contexto";
+    context.title =
+      "Reproduzir dos quadros " + range.startFrame + " a " + range.endFrame + ".";
+    context.addEventListener("click", () => playReviewIntervalContext(interval));
     const seek = document.createElement("button");
     seek.type = "button";
     seek.textContent = "Ir";
     seek.addEventListener("click", () => {
+      contextEndTime = null;
       player.currentTime = Number(start.input.value) / fps;
       updatePosition(player.currentTime);
     });
@@ -375,6 +423,7 @@ function renderReviewIntervals() {
       start.label,
       end.label,
       classification.label,
+      context,
       seek,
       save,
       remove,
@@ -529,8 +578,15 @@ player.addEventListener("loadedmetadata", () => {
   status.textContent = `Pronto · ${player.videoWidth}x${player.videoHeight}`;
   updatePosition();
 });
-player.addEventListener("seeked", () => updatePosition());
-player.addEventListener("timeupdate", () => updatePosition());
+player.addEventListener("seeked", () => {
+  updatePosition();
+  stopContextPlayback();
+});
+player.addEventListener("timeupdate", () => {
+  updatePosition();
+  stopContextPlayback();
+});
+player.addEventListener("ended", stopContextPlayback);
 player.addEventListener("error", () => {
   status.textContent = "O navegador não conseguiu reproduzir esta mídia.";
 });

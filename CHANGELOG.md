@@ -17,6 +17,8 @@ Python.
   editar os limites numericamente.
 - Classificação humana de intervalos como principal, alternativa, blooper ou
   descarte, preservando também o estado ainda não classificado.
+- Reprodução de contexto de três segundos antes e depois de cada intervalo,
+  interrompida automaticamente ao fim da margem posterior.
 
 ## [0.3.0] - 2026-11-15
 
