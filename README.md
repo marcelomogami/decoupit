@@ -145,18 +145,19 @@ está disponível, a mesma tela oferece o download de um SRT compatível com o
 Kdenlive. Os cues são formados a partir das palavras alinhadas e não dos chunks
 internos usados pelo WhisperX.
 
-A revisão manual em desenvolvimento já permite marcar entrada e saída no
-player, persistir o intervalo em quadros CFR 30, ajustar os dois limites e
+A revisão manual permite marcar entrada e saída no player, persistir o
+intervalo em quadros CFR 30, ajustar os dois limites e
 classificá-lo como principal, alternativa, blooper ou descarte. A lista pode
 ser retomada depois de fechar a página, e cada intervalo pode ser ouvido com
 três segundos de contexto antes e depois. Atalhos de revisão permitem marcar
 entrada, criar o intervalo, navegar por quadro e controlar a reprodução.
 Limites e classificações são salvos automaticamente após a edição.
 O botão `Baixar CSV` produz um relatório auditável dos intervalos revisados.
-`Baixar marcadores JSON` produz marcadores neutros em quadros CFR 30, cuja
-compatibilidade com o Kdenlive ainda será validada.
+`Baixar marcadores JSON` produz marcadores neutros em quadros CFR 30, voltados
+a integrações que entendam o formato do DecoupIt.
 `Baixar para Kdenlive` gera o JSON de marcadores de clipe aceito pelo Kdenlive
-26.08; a prova de importação em projeto descartável continua pendente.
+26.08 e validado no Kdenlive 26.08.3. O fluxo de uso está em
+[`docs/25-fluxo-kdenlive.md`](docs/25-fluxo-kdenlive.md).
 
 ## Privacidade
 
