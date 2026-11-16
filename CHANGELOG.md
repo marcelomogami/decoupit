@@ -25,6 +25,8 @@ Python.
   `J` e `L` para navegar por quadro e `K` para reproduzir ou pausar.
 - Salvamento automático de limites e classificação após uma breve pausa na
   edição, com prevenção de gravação de limites inválidos.
+- Download de CSV auditável com quadros inclusivos, tempos canônicos em
+  microssegundos, duração e classificação de cada intervalo revisado.
 
 ## [0.3.0] - 2026-11-15
 

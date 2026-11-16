@@ -148,6 +148,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
     database_path, _, project_id, source_id = _normalized_media(tmp_path)
     paths = AppPaths(database_path.parent, tmp_path / "cache")
     endpoint = f"/api/projects/{project_id}/sources/{source_id}/review-intervals"
+    export_endpoint = endpoint + "/export.csv"
 
     with TestClient(create_app(paths=paths)) as client:
         empty = client.get(endpoint)
@@ -185,6 +186,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
             },
             headers={"Origin": "http://testserver"},
         )
+        exported = client.get(export_endpoint)
 
     with TestClient(create_app(paths=paths)) as client:
         listed = client.get(endpoint)
@@ -210,6 +212,16 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
     assert updated.json()["end_frame"] == 10
     assert updated.json()["classification"] is None
     assert classified.json()["classification"] == "alternative"
+    assert exported.status_code == 200
+    assert exported.headers["content-type"] == "text/csv; charset=utf-8"
+    assert exported.headers["content-disposition"] == (
+        'attachment; filename="decupagem.csv"'
+    )
+    assert exported.text == (
+        "id_intervalo,quadro_entrada,quadro_saida,inicio_us,fim_exclusivo_us,"
+        "duracao_quadros,classificacao\n"
+        f"{created.json()['id']},4,10,133334,366667,7,alternativa\n"
+    )
     assert listed.json() == [classified.json()]
     assert deleted.status_code == 204
     assert missing.status_code == 404
