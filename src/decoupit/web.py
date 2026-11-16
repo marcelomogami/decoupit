@@ -35,6 +35,14 @@ from decoupit.normalization import (
 )
 from decoupit.paths import AppPaths, resolve_app_paths
 from decoupit.projects import Project, create_project, get_project, list_projects
+from decoupit.review_intervals import (
+    ReviewInterval,
+    ReviewIntervalError,
+    create_review_interval,
+    delete_review_interval,
+    list_review_intervals,
+    update_review_interval,
+)
 from decoupit.sources import (
     SourceMedia,
     create_source,
@@ -170,6 +178,22 @@ class TranscriptDocumentOutput(BaseModel):
     segments: tuple[TranscriptSegmentOutput, ...]
 
 
+class ReviewIntervalInput(BaseModel):
+    start_frame: Annotated[int, Field(strict=True, ge=0)]
+    end_frame: Annotated[int, Field(strict=True, ge=0)]
+
+
+class ReviewIntervalOutput(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    normalized_media_id: str
+    start_frame: int
+    end_frame: int
+    created_at: str
+    updated_at: str
+
+
 def create_app(
     paths: AppPaths | None = None,
     media_probe: Callable[[Path], SourceInspection] = probe_source,
@@ -204,6 +228,29 @@ def create_app(
         TrustedHostMiddleware,
         allowed_hosts=["127.0.0.1", "localhost", "testserver"],
     )
+
+    def review_media(
+        connection: sqlite3.Connection, project_id: str, source_id: str
+    ) -> tuple[NormalizedMedia, int]:
+        try:
+            source = get_source(connection, source_id)
+        except KeyError as error:
+            raise HTTPException(
+                status_code=404, detail="mídia de origem não encontrada"
+            ) from error
+        if source.project_id != project_id:
+            raise HTTPException(
+                status_code=404, detail="mídia de origem não encontrada"
+            )
+        normalized = get_normalized_media(connection, source_id)
+        if normalized is None:
+            raise HTTPException(
+                status_code=409, detail="a normalização precisa terminar primeiro"
+            )
+        frame_count = normalized.frame_count or max(
+            1, (normalized.duration_us * 30 + 999_999) // 1_000_000
+        )
+        return normalized, frame_count
 
     @app.middleware("http")
     async def validate_origin(
@@ -435,6 +482,9 @@ def create_app(
             if transcription is not None and transcription.raw_output_path.is_file()
             else ""
         )
+        review_intervals_url = (
+            f"/api/projects/{project.id}/sources/{source.id}/review-intervals"
+        )
         subtitle_link = (
             f'<a class="transcript-download" '
             f'href="/api/transcriptions/{transcription.id}/subtitles.srt" '
@@ -458,7 +508,8 @@ def create_app(
   </head>
   <body data-fps="30" data-frame-count="{frame_count}"
         data-waveform-url="{waveform_url}"
-        data-transcript-url="{transcript_url}">
+        data-transcript-url="{transcript_url}"
+        data-review-intervals-url="{review_intervals_url}">
     <main>
       <h1>{safe_project_name}</h1>
       <p class="meta">
@@ -504,6 +555,20 @@ def create_app(
                 aria-valuemax="{frame_count - 1}" aria-valuenow="0"></canvas>
         <p id="waveform-message">Carregando waveform...</p>
       </div>
+      <section class="review-intervals" aria-labelledby="review-intervals-title">
+        <div class="review-intervals-heading">
+          <h2 id="review-intervals-title">Intervalos manuais</h2>
+          <div class="interval-controls">
+            <button id="mark-interval-start" type="button">Marcar entrada</button>
+            <button id="create-review-interval" type="button" disabled>
+              Criar até o quadro atual
+            </button>
+          </div>
+        </div>
+        <output id="interval-pending">Nenhuma entrada marcada.</output>
+        <p id="interval-message" role="status"></p>
+        <ol id="review-interval-list"></ol>
+      </section>
       <p id="status">Carregando metadados do vídeo...</p>
     </main>
   </body>
@@ -719,5 +784,78 @@ def create_app(
                 "Content-Disposition": 'attachment; filename="transcript.srt"',
             },
         )
+
+    @app.get(
+        "/api/projects/{project_id}/sources/{source_id}/review-intervals",
+        response_model=list[ReviewIntervalOutput],
+    )
+    def review_interval_list(project_id: str, source_id: str) -> list[ReviewInterval]:
+        with connect_database(app_paths.database) as connection:
+            normalized, _ = review_media(connection, project_id, source_id)
+            return list_review_intervals(connection, normalized.id)
+
+    @app.post(
+        "/api/projects/{project_id}/sources/{source_id}/review-intervals",
+        response_model=ReviewIntervalOutput,
+        status_code=201,
+    )
+    def review_interval_create(
+        project_id: str,
+        source_id: str,
+        interval: ReviewIntervalInput,
+    ) -> ReviewInterval:
+        with connect_database(app_paths.database) as connection:
+            normalized, frame_count = review_media(connection, project_id, source_id)
+            try:
+                return create_review_interval(
+                    connection,
+                    normalized.id,
+                    start_frame=interval.start_frame,
+                    end_frame=interval.end_frame,
+                    frame_count=frame_count,
+                )
+            except ReviewIntervalError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.patch(
+        "/api/projects/{project_id}/sources/{source_id}/review-intervals/{interval_id}",
+        response_model=ReviewIntervalOutput,
+    )
+    def review_interval_update(
+        project_id: str,
+        source_id: str,
+        interval_id: str,
+        interval: ReviewIntervalInput,
+    ) -> ReviewInterval:
+        with connect_database(app_paths.database) as connection:
+            normalized, frame_count = review_media(connection, project_id, source_id)
+            try:
+                return update_review_interval(
+                    connection,
+                    normalized.id,
+                    interval_id,
+                    start_frame=interval.start_frame,
+                    end_frame=interval.end_frame,
+                    frame_count=frame_count,
+                )
+            except KeyError as error:
+                raise HTTPException(
+                    status_code=404, detail="intervalo não encontrado"
+                ) from error
+            except ReviewIntervalError as error:
+                raise HTTPException(status_code=422, detail=str(error)) from error
+
+    @app.delete(
+        "/api/projects/{project_id}/sources/{source_id}/review-intervals/{interval_id}",
+        status_code=204,
+    )
+    def review_interval_delete(
+        project_id: str, source_id: str, interval_id: str
+    ) -> Response:
+        with connect_database(app_paths.database) as connection:
+            normalized, _ = review_media(connection, project_id, source_id)
+            if not delete_review_interval(connection, normalized.id, interval_id):
+                raise HTTPException(status_code=404, detail="intervalo não encontrado")
+        return Response(status_code=204)
 
     return app

@@ -234,6 +234,100 @@ video {
   min-height: 1.5em;
 }
 
+.review-intervals {
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid #454952;
+  border-radius: 8px;
+  background: #202329;
+}
+
+.review-intervals-heading,
+.interval-controls,
+.review-interval form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.review-intervals-heading {
+  justify-content: space-between;
+}
+
+.review-intervals-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.interval-controls button,
+.review-interval button {
+  border: 1px solid #5a606b;
+  border-radius: 5px;
+  background: #2c3037;
+  color: #f4f4f5;
+  padding: 7px 10px;
+  cursor: pointer;
+}
+
+.interval-controls button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+#interval-pending,
+#interval-message {
+  display: block;
+  min-height: 1.25em;
+  margin: 10px 0 0;
+  color: #b4b7bd;
+  font-size: 0.85rem;
+}
+
+#review-interval-list {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-interval {
+  padding: 10px;
+  border: 1px solid #454952;
+  border-radius: 6px;
+  background: #24272d;
+}
+
+.review-interval form {
+  flex-wrap: wrap;
+}
+
+.review-interval label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #b4b7bd;
+  font-size: 0.8rem;
+}
+
+.review-interval input {
+  width: 8ch;
+  border: 1px solid #5a606b;
+  border-radius: 4px;
+  background: #17191d;
+  color: #f4f4f5;
+  padding: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.review-interval button.danger {
+  color: #ff9aa8;
+}
+
+.interval-empty {
+  color: #b4b7bd;
+}
+
 @media (max-width: 850px) {
   .review-grid {
     grid-template-columns: 1fr;
@@ -241,5 +335,10 @@ video {
 
   .transcript-panel {
     max-height: 40vh;
+  }
+
+  .review-intervals-heading {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }

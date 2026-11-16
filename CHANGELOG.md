@@ -9,6 +9,13 @@ Python.
 
 ## [Não lançado]
 
+### Adicionado
+
+- Intervalos manuais persistidos em quadros CFR 30, com criação, listagem,
+  ajuste e exclusão por API local.
+- Controles na tela de revisão para marcar entrada e saída, navegar ao início e
+  editar os limites numericamente.
+
 ## [0.3.0] - 2026-11-15
 
 ### Adicionado

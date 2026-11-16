@@ -12,11 +12,17 @@ const transcriptQuery = document.querySelector("#transcript-query");
 const previousMatch = document.querySelector("#previous-match");
 const nextMatch = document.querySelector("#next-match");
 const matchCount = document.querySelector("#match-count");
+const markIntervalStart = document.querySelector("#mark-interval-start");
+const createInterval = document.querySelector("#create-review-interval");
+const intervalPending = document.querySelector("#interval-pending");
+const intervalMessage = document.querySelector("#interval-message");
+const reviewIntervalList = document.querySelector("#review-interval-list");
 
 const fps = Number(document.body.dataset.fps);
 const frameCount = Number(document.body.dataset.frameCount);
 const waveformUrl = document.body.dataset.waveformUrl;
 const transcriptUrl = document.body.dataset.transcriptUrl;
+const reviewIntervalsUrl = document.body.dataset.reviewIntervalsUrl;
 let peaks = null;
 let waveformBase = null;
 let transcriptWords = [];
@@ -24,6 +30,8 @@ let activeWordIndex = -1;
 let searchableTranscript = "";
 let searchMatches = [];
 let currentMatchIndex = -1;
+let pendingIntervalStartFrame = null;
+let reviewIntervals = [];
 
 function formatTime(seconds) {
   const milliseconds = Math.max(0, Math.floor(seconds * 1000));
@@ -230,6 +238,161 @@ function renderTranscript(documentData) {
   findSearchMatches();
 }
 
+async function intervalRequest(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    let detail = "Não foi possível salvar o intervalo.";
+    try {
+      const body = await response.json();
+      if (body.detail) {
+        detail = body.detail;
+      }
+    } catch {
+      // Mantém a mensagem genérica para respostas sem JSON.
+    }
+    throw new Error(detail);
+  }
+  return response.status === 204 ? null : response.json();
+}
+
+function intervalField(labelText, value) {
+  const label = document.createElement("label");
+  const text = document.createElement("span");
+  text.textContent = labelText;
+  const input = document.createElement("input");
+  input.type = "number";
+  input.min = "0";
+  input.max = String(frameCount - 1);
+  input.step = "1";
+  input.required = true;
+  input.value = String(value);
+  label.append(text, input);
+  return { label, input };
+}
+
+function renderReviewIntervals() {
+  reviewIntervalList.replaceChildren();
+  if (reviewIntervals.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "interval-empty";
+    empty.textContent = "Nenhum intervalo criado.";
+    reviewIntervalList.append(empty);
+    return;
+  }
+  reviewIntervals.sort(
+    (left, right) =>
+      left.start_frame - right.start_frame || left.end_frame - right.end_frame,
+  );
+  for (const interval of reviewIntervals) {
+    const item = document.createElement("li");
+    item.className = "review-interval";
+    const form = document.createElement("form");
+    const start = intervalField("Entrada", interval.start_frame);
+    const end = intervalField("Saída", interval.end_frame);
+    const seek = document.createElement("button");
+    seek.type = "button";
+    seek.textContent = "Ir";
+    seek.addEventListener("click", () => {
+      player.currentTime = Number(start.input.value) / fps;
+      updatePosition(player.currentTime);
+    });
+    const save = document.createElement("button");
+    save.type = "submit";
+    save.textContent = "Salvar";
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "danger";
+    remove.textContent = "Excluir";
+    remove.addEventListener("click", async () => {
+      intervalMessage.textContent = "Excluindo intervalo...";
+      try {
+        await intervalRequest(reviewIntervalsUrl + "/" + interval.id, {
+          method: "DELETE",
+        });
+        reviewIntervals = reviewIntervals.filter(
+          (candidate) => candidate.id !== interval.id,
+        );
+        renderReviewIntervals();
+        intervalMessage.textContent = "Intervalo excluído.";
+      } catch (error) {
+        intervalMessage.textContent = error.message;
+      }
+    });
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const startFrame = Number(start.input.value);
+      const endFrame = Number(end.input.value);
+      intervalMessage.textContent = "Salvando intervalo...";
+      try {
+        const updated = await intervalRequest(
+          reviewIntervalsUrl + "/" + interval.id,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              start_frame: startFrame,
+              end_frame: endFrame,
+            }),
+          },
+        );
+        reviewIntervals = reviewIntervals.map((candidate) =>
+          candidate.id === updated.id ? updated : candidate,
+        );
+        renderReviewIntervals();
+        intervalMessage.textContent = "Intervalo atualizado.";
+      } catch (error) {
+        intervalMessage.textContent = error.message;
+      }
+    });
+    form.append(start.label, end.label, seek, save, remove);
+    item.append(form);
+    reviewIntervalList.append(item);
+  }
+}
+
+function markReviewIntervalStart() {
+  pendingIntervalStartFrame = frameAt(player.currentTime);
+  intervalPending.textContent =
+    "Entrada marcada no quadro " + pendingIntervalStartFrame + ".";
+  createInterval.disabled = false;
+  intervalMessage.textContent = "";
+}
+
+async function createReviewInterval() {
+  if (pendingIntervalStartFrame === null) {
+    return;
+  }
+  const endFrame = frameAt(player.currentTime);
+  if (endFrame < pendingIntervalStartFrame) {
+    intervalMessage.textContent =
+      "O quadro de saída não pode vir antes da entrada.";
+    return;
+  }
+  createInterval.disabled = true;
+  intervalMessage.textContent = "Criando intervalo...";
+  try {
+    const created = await intervalRequest(reviewIntervalsUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        start_frame: pendingIntervalStartFrame,
+        end_frame: endFrame,
+      }),
+    });
+    reviewIntervals.push(created);
+    pendingIntervalStartFrame = null;
+    intervalPending.textContent = "Nenhuma entrada marcada.";
+    renderReviewIntervals();
+    intervalMessage.textContent = "Intervalo criado.";
+  } catch (error) {
+    createInterval.disabled = false;
+    intervalMessage.textContent = error.message;
+  }
+}
+
+markIntervalStart.addEventListener("click", markReviewIntervalStart);
+createInterval.addEventListener("click", createReviewInterval);
+
 transcriptQuery.addEventListener("input", findSearchMatches);
 transcriptSearch.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -386,3 +549,12 @@ if (transcriptUrl) {
 } else {
   transcriptMessage.textContent = "Transcrição ainda não disponível.";
 }
+
+intervalRequest(reviewIntervalsUrl)
+  .then((intervals) => {
+    reviewIntervals = intervals;
+    renderReviewIntervals();
+  })
+  .catch((error) => {
+    intervalMessage.textContent = error.message;
+  });

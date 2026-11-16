@@ -145,6 +145,10 @@ está disponível, a mesma tela oferece o download de um SRT compatível com o
 Kdenlive. Os cues são formados a partir das palavras alinhadas e não dos chunks
 internos usados pelo WhisperX.
 
+A revisão manual em desenvolvimento já permite marcar entrada e saída no
+player, persistir o intervalo em quadros CFR 30, ajustar os dois limites e
+retomar a lista depois de fechar a página.
+
 ## Privacidade
 
 O DecoupIt será uma ferramenta pessoal e local. Vídeos, áudios, transcrições e
