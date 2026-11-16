@@ -29,6 +29,8 @@ Python.
   microssegundos, duração e classificação de cada intervalo revisado.
 - Download de marcadores JSON neutros em CFR 30, distinguindo pontos de
   intervalos e preservando a classificação humana.
+- Vocabulário estável de categorias e cores para principal, alternativa,
+  blooper, descarte e intervalo sem classificação.
 
 ## [0.3.0] - 2026-11-15
 

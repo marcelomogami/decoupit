@@ -7,6 +7,7 @@ import json
 from collections.abc import Sequence
 from io import StringIO
 
+from decoupit.review_categories import review_category
 from decoupit.review_intervals import ReviewInterval
 from decoupit.timing import frame_start_us
 
@@ -57,12 +58,18 @@ def render_review_markers_json(
 
     markers: list[dict[str, str | int | None]] = []
     for interval in intervals:
-        marker: dict[str, str | int | None] = {
+        category = review_category(interval.classification)
+        marker: dict[str, str | int | dict[str, str] | None] = {
             "id": interval.id,
             "kind": (
                 "point" if interval.start_frame == interval.end_frame else "interval"
             ),
             "classification": interval.classification,
+            "category": {
+                "key": category.key,
+                "label": category.label,
+                "color": category.color,
+            },
         }
         if interval.start_frame == interval.end_frame:
             marker["frame"] = interval.start_frame

@@ -74,6 +74,11 @@ def test_render_review_markers_uses_points_and_inclusive_intervals() -> None:
                 "kind": "point",
                 "frame": 4,
                 "classification": None,
+                "category": {
+                    "key": "unclassified",
+                    "label": "Sem classificação",
+                    "color": "#8b9099",
+                },
             },
             {
                 "id": "interval",
@@ -81,6 +86,11 @@ def test_render_review_markers_uses_points_and_inclusive_intervals() -> None:
                 "start_frame": 8,
                 "end_frame": 12,
                 "classification": "primary",
+                "category": {
+                    "key": "primary",
+                    "label": "Principal",
+                    "color": "#68c98c",
+                },
             },
         ],
     }

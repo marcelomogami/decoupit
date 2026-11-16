@@ -240,6 +240,11 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
                 "start_frame": 4,
                 "end_frame": 10,
                 "classification": "alternative",
+                "category": {
+                    "key": "alternative",
+                    "label": "Alternativa",
+                    "color": "#68a9df",
+                },
             }
         ],
     }
