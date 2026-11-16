@@ -9,6 +9,8 @@ Python.
 
 ## [Não lançado]
 
+## [0.3.0] - 2026-11-15
+
 ### Adicionado
 
 - Pipeline WhisperX com Faster Whisper `medium`, VAD do pyannote e alinhamento
@@ -139,6 +141,7 @@ Python.
   interno de testes são rejeitadas.
 - Requisições de escrita com `Origin` diferente da origem local são rejeitadas.
 
-[Não lançado]: https://github.com/marcelomogami/decoupit/compare/v0.2.0...HEAD
+[Não lançado]: https://github.com/marcelomogami/decoupit/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/marcelomogami/decoupit/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marcelomogami/decoupit/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/marcelomogami/decoupit/releases/tag/v0.1.0
