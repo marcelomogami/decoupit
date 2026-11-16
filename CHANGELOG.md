@@ -9,6 +9,19 @@ Python.
 
 ## [Não lançado]
 
+## [0.5.0] - 2026-11-16
+
+### Adicionado
+
+- Download de CSV auditável com quadros inclusivos, tempos canônicos em
+  microssegundos, duração e classificação de cada intervalo revisado.
+- Download de marcadores JSON neutros em CFR 30, distinguindo pontos de
+  intervalos e preservando a classificação humana.
+- Vocabulário estável de categorias e cores para principal, alternativa,
+  blooper, descarte e intervalo sem classificação.
+- Download de JSON específico para a importação de marcadores de clipe no
+  Kdenlive 26.08, com posições e durações expressas em quadros.
+
 ## [0.4.0] - 2026-11-16
 
 ### Adicionado
@@ -25,14 +38,6 @@ Python.
   `J` e `L` para navegar por quadro e `K` para reproduzir ou pausar.
 - Salvamento automático de limites e classificação após uma breve pausa na
   edição, com prevenção de gravação de limites inválidos.
-- Download de CSV auditável com quadros inclusivos, tempos canônicos em
-  microssegundos, duração e classificação de cada intervalo revisado.
-- Download de marcadores JSON neutros em CFR 30, distinguindo pontos de
-  intervalos e preservando a classificação humana.
-- Vocabulário estável de categorias e cores para principal, alternativa,
-  blooper, descarte e intervalo sem classificação.
-- Download de JSON específico para a importação de marcadores de clipe no
-  Kdenlive 26.08, com posições e durações expressas em quadros.
 
 ## [0.3.0] - 2026-11-15
 
@@ -166,7 +171,8 @@ Python.
   interno de testes são rejeitadas.
 - Requisições de escrita com `Origin` diferente da origem local são rejeitadas.
 
-[Não lançado]: https://github.com/marcelomogami/decoupit/compare/v0.4.0...HEAD
+[Não lançado]: https://github.com/marcelomogami/decoupit/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/marcelomogami/decoupit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/marcelomogami/decoupit/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/marcelomogami/decoupit/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/marcelomogami/decoupit/compare/v0.1.0...v0.2.0

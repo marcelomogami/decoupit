@@ -3,6 +3,6 @@ from importlib.metadata import version
 import decoupit
 
 
-def test_package_uses_review_release_version() -> None:
+def test_package_uses_export_release_version() -> None:
     assert decoupit.__name__ == "decoupit"
-    assert version("decoupit") == "0.4.0"
+    assert version("decoupit") == "0.5.0"
