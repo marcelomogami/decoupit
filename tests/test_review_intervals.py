@@ -150,6 +150,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
     endpoint = f"/api/projects/{project_id}/sources/{source_id}/review-intervals"
     export_endpoint = endpoint + "/export.csv"
     markers_endpoint = endpoint + "/markers.json"
+    kdenlive_markers_endpoint = endpoint + "/kdenlive-markers.json"
 
     with TestClient(create_app(paths=paths)) as client:
         empty = client.get(endpoint)
@@ -189,6 +190,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
         )
         exported = client.get(export_endpoint)
         markers = client.get(markers_endpoint)
+        kdenlive_markers = client.get(kdenlive_markers_endpoint)
 
     with TestClient(create_app(paths=paths)) as client:
         listed = client.get(endpoint)
@@ -248,6 +250,18 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
             }
         ],
     }
+    assert kdenlive_markers.status_code == 200
+    assert kdenlive_markers.headers["content-disposition"] == (
+        'attachment; filename="decupagem-kdenlive-markers.json"'
+    )
+    assert kdenlive_markers.json() == [
+        {
+            "pos": 4,
+            "comment": "DecoupIt: Alternativa",
+            "type": 0,
+            "duration": 7,
+        }
+    ]
     assert listed.json() == [classified.json()]
     assert deleted.status_code == 204
     assert missing.status_code == 404

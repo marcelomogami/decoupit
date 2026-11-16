@@ -155,6 +155,8 @@ Limites e classificações são salvos automaticamente após a edição.
 O botão `Baixar CSV` produz um relatório auditável dos intervalos revisados.
 `Baixar marcadores JSON` produz marcadores neutros em quadros CFR 30, cuja
 compatibilidade com o Kdenlive ainda será validada.
+`Baixar para Kdenlive` gera o JSON de marcadores de clipe aceito pelo Kdenlive
+26.08; a prova de importação em projeto descartável continua pendente.
 
 ## Privacidade
 

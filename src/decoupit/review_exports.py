@@ -84,3 +84,24 @@ def render_review_markers_json(
         "markers": markers,
     }
     return json.dumps(document, ensure_ascii=False, indent=2) + "\n"
+
+
+def render_kdenlive_markers_json(intervals: Sequence[ReviewInterval]) -> str:
+    """Render the JSON array imported by Kdenlive 26.08 clip markers."""
+
+    markers = []
+    for interval in intervals:
+        category = review_category(interval.classification)
+        markers.append(
+            {
+                "pos": interval.start_frame,
+                "comment": f"DecoupIt: {category.label}",
+                "type": 0,
+                "duration": (
+                    interval.end_frame - interval.start_frame + 1
+                    if interval.start_frame != interval.end_frame
+                    else 0
+                ),
+            }
+        )
+    return json.dumps(markers, ensure_ascii=False, indent=2) + "\n"

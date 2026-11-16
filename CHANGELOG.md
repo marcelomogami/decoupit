@@ -31,6 +31,8 @@ Python.
   intervalos e preservando a classificação humana.
 - Vocabulário estável de categorias e cores para principal, alternativa,
   blooper, descarte e intervalo sem classificação.
+- Download de JSON específico para a importação de marcadores de clipe no
+  Kdenlive 26.08, com posições e durações expressas em quadros.
 
 ## [0.3.0] - 2026-11-15
 

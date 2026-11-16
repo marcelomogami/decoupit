@@ -1,6 +1,10 @@
 import json
 
-from decoupit.review_exports import render_review_csv, render_review_markers_json
+from decoupit.review_exports import (
+    render_kdenlive_markers_json,
+    render_review_csv,
+    render_review_markers_json,
+)
 from decoupit.review_intervals import ReviewInterval
 
 
@@ -94,3 +98,29 @@ def test_render_review_markers_uses_points_and_inclusive_intervals() -> None:
             },
         ],
     }
+
+
+def test_render_kdenlive_markers_uses_frames_and_range_duration() -> None:
+    rendered = json.loads(
+        render_kdenlive_markers_json(
+            (
+                _interval("point", 4, 4, None),
+                _interval("interval", 8, 12, "primary"),
+            )
+        )
+    )
+
+    assert rendered == [
+        {
+            "pos": 4,
+            "comment": "DecoupIt: Sem classificação",
+            "type": 0,
+            "duration": 0,
+        },
+        {
+            "pos": 8,
+            "comment": "DecoupIt: Principal",
+            "type": 0,
+            "duration": 5,
+        },
+    ]
