@@ -153,6 +153,8 @@ três segundos de contexto antes e depois. Atalhos de revisão permitem marcar
 entrada, criar o intervalo, navegar por quadro e controlar a reprodução.
 Limites e classificações são salvos automaticamente após a edição.
 O botão `Baixar CSV` produz um relatório auditável dos intervalos revisados.
+`Baixar marcadores JSON` produz marcadores neutros em quadros CFR 30, cuja
+compatibilidade com o Kdenlive ainda será validada.
 
 ## Privacidade
 

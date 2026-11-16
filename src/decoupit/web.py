@@ -35,7 +35,7 @@ from decoupit.normalization import (
 )
 from decoupit.paths import AppPaths, resolve_app_paths
 from decoupit.projects import Project, create_project, get_project, list_projects
-from decoupit.review_exports import render_review_csv
+from decoupit.review_exports import render_review_csv, render_review_markers_json
 from decoupit.review_intervals import (
     ReviewInterval,
     ReviewIntervalError,
@@ -491,6 +491,7 @@ def create_app(
             f"/api/projects/{project.id}/sources/{source.id}/review-intervals"
         )
         review_csv_url = review_intervals_url + "/export.csv"
+        review_markers_url = review_intervals_url + "/markers.json"
         subtitle_link = (
             f'<a class="transcript-download" '
             f'href="/api/transcriptions/{transcription.id}/subtitles.srt" '
@@ -567,6 +568,8 @@ def create_app(
           <div class="interval-controls">
             <a class="transcript-download" href="{review_csv_url}"
                download="decupagem.csv">Baixar CSV</a>
+            <a class="transcript-download" href="{review_markers_url}"
+               download="decupagem-markers.json">Baixar marcadores JSON</a>
             <button id="mark-interval-start" type="button">Marcar entrada</button>
             <button id="create-review-interval" type="button" disabled>
               Criar até o quadro atual
@@ -823,6 +826,24 @@ def create_app(
             headers={
                 "Cache-Control": "no-store",
                 "Content-Disposition": 'attachment; filename="decupagem.csv"',
+            },
+        )
+
+    @app.get(
+        "/api/projects/{project_id}/sources/{source_id}/review-intervals/markers.json"
+    )
+    def review_markers_export(project_id: str, source_id: str) -> Response:
+        with connect_database(app_paths.database) as connection:
+            normalized, _ = review_media(connection, project_id, source_id)
+            intervals = list_review_intervals(connection, normalized.id)
+        return Response(
+            render_review_markers_json(normalized.id, intervals),
+            media_type="application/json",
+            headers={
+                "Cache-Control": "no-store",
+                "Content-Disposition": (
+                    'attachment; filename="decupagem-markers.json"'
+                ),
             },
         )
 

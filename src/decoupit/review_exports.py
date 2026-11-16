@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from collections.abc import Sequence
 from io import StringIO
 
@@ -47,3 +48,32 @@ def render_review_csv(intervals: Sequence[ReviewInterval]) -> str:
             )
         )
     return output.getvalue()
+
+
+def render_review_markers_json(
+    normalized_media_id: str, intervals: Sequence[ReviewInterval]
+) -> str:
+    """Render manual decisions as frame-accurate, neutral JSON markers."""
+
+    markers: list[dict[str, str | int | None]] = []
+    for interval in intervals:
+        marker: dict[str, str | int | None] = {
+            "id": interval.id,
+            "kind": (
+                "point" if interval.start_frame == interval.end_frame else "interval"
+            ),
+            "classification": interval.classification,
+        }
+        if interval.start_frame == interval.end_frame:
+            marker["frame"] = interval.start_frame
+        else:
+            marker["start_frame"] = interval.start_frame
+            marker["end_frame"] = interval.end_frame
+        markers.append(marker)
+    document = {
+        "format": "decoupit.review-markers/v1",
+        "normalized_media_id": normalized_media_id,
+        "frame_rate": {"numerator": 30, "denominator": 1},
+        "markers": markers,
+    }
+    return json.dumps(document, ensure_ascii=False, indent=2) + "\n"

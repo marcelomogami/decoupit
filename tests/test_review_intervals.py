@@ -149,6 +149,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
     paths = AppPaths(database_path.parent, tmp_path / "cache")
     endpoint = f"/api/projects/{project_id}/sources/{source_id}/review-intervals"
     export_endpoint = endpoint + "/export.csv"
+    markers_endpoint = endpoint + "/markers.json"
 
     with TestClient(create_app(paths=paths)) as client:
         empty = client.get(endpoint)
@@ -187,6 +188,7 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
             headers={"Origin": "http://testserver"},
         )
         exported = client.get(export_endpoint)
+        markers = client.get(markers_endpoint)
 
     with TestClient(create_app(paths=paths)) as client:
         listed = client.get(endpoint)
@@ -222,6 +224,25 @@ def test_review_interval_api_persists_updates_across_restart(tmp_path: Path) -> 
         "duracao_quadros,classificacao\n"
         f"{created.json()['id']},4,10,133334,366667,7,alternativa\n"
     )
+    assert markers.status_code == 200
+    assert markers.headers["content-type"] == "application/json"
+    assert markers.headers["content-disposition"] == (
+        'attachment; filename="decupagem-markers.json"'
+    )
+    assert markers.json() == {
+        "format": "decoupit.review-markers/v1",
+        "normalized_media_id": "normalized-1",
+        "frame_rate": {"numerator": 30, "denominator": 1},
+        "markers": [
+            {
+                "id": created.json()["id"],
+                "kind": "interval",
+                "start_frame": 4,
+                "end_frame": 10,
+                "classification": "alternative",
+            }
+        ],
+    }
     assert listed.json() == [classified.json()]
     assert deleted.status_code == 204
     assert missing.status_code == 404

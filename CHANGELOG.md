@@ -27,6 +27,8 @@ Python.
   edição, com prevenção de gravação de limites inválidos.
 - Download de CSV auditável com quadros inclusivos, tempos canônicos em
   microssegundos, duração e classificação de cada intervalo revisado.
+- Download de marcadores JSON neutros em CFR 30, distinguindo pontos de
+  intervalos e preservando a classificação humana.
 
 ## [0.3.0] - 2026-11-15
 

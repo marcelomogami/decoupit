@@ -1,4 +1,6 @@
-from decoupit.review_exports import render_review_csv
+import json
+
+from decoupit.review_exports import render_review_csv, render_review_markers_json
 from decoupit.review_intervals import ReviewInterval
 
 
@@ -49,3 +51,36 @@ def test_render_review_csv_uses_portuguese_classification_labels() -> None:
         "blooper",
         "descarte",
     ]
+
+
+def test_render_review_markers_uses_points_and_inclusive_intervals() -> None:
+    rendered = json.loads(
+        render_review_markers_json(
+            "normalized-1",
+            (
+                _interval("point", 4, 4, None),
+                _interval("interval", 8, 12, "primary"),
+            ),
+        )
+    )
+
+    assert rendered == {
+        "format": "decoupit.review-markers/v1",
+        "normalized_media_id": "normalized-1",
+        "frame_rate": {"numerator": 30, "denominator": 1},
+        "markers": [
+            {
+                "id": "point",
+                "kind": "point",
+                "frame": 4,
+                "classification": None,
+            },
+            {
+                "id": "interval",
+                "kind": "interval",
+                "start_frame": 8,
+                "end_frame": 12,
+                "classification": "primary",
+            },
+        ],
+    }
